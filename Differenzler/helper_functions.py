@@ -1,12 +1,10 @@
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 
 import keras
 import numpy as np
 
-
 TNRepresentation = np.array
 Sample = Tuple[np.array, Union[int, float]]
-
 
 trump_points = {0: 20, 1: 14, 2: 11, 3: 4, 4: 3, 5: 10, 6: 0, 7: 0, 8: 0}
 color_points = {0: 11, 1: 4, 2: 3, 3: 2, 4: 10, 5: 0, 6: 0, 7: 0, 8: 0}
@@ -86,3 +84,89 @@ def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool):
         block = keras.layers.BatchNormalization()(block)
     block = keras.layers.add([block, input_tensor])
     return keras.layers.Activation('relu')(block)
+
+
+def two_nbr_rep_swap_suit(card: TNRepresentation, swap_suit1: int, swap_suit2: int) -> TNRepresentation:
+    """
+    expects a card in two-numbers representation. If the suit is equal to 'swap_suit1' or 'swap_suit2' the suits
+    will be changed
+    :param card: card to be examined
+    :param swap_suit1: one of the suits that should be swapped
+    :param swap_suit2: one of the suits that should be swapped
+    :return: a card in two-number representation but with swapped suits (given that 'card' is of any of the suits)
+    """
+    assert card.shape == (2,)
+    assert 0 <= swap_suit1 < 4
+    assert 0 <= swap_suit2 < 4
+    if swap_suit1 == 0 or swap_suit2 == 0:
+        print('WARNING: you are swapping the trump suit')
+    output = np.copy(card)
+    if card[1] == swap_suit1:
+        output[1] = swap_suit2
+    elif card[1] == swap_suit2:
+        output[1] = swap_suit1
+    return output
+
+
+def two_nbr_rep_table_booster(table: np.array, swap_suit1: int, swap_suit2: int) -> np.array:
+    """
+    expects a table in two-number-representation and swaps the two provided suits of all cards
+    :param table: vector with 8 entries
+    :param swap_suit1: one of the suits that should be swapped
+    :param swap_suit2: one of the suits that should be swapped
+    :return: a table in two-numbers representation but with swapped suits
+    """
+    assert table.shape == (8,)
+    assert np.all(-1 <= table[[0, 2, 4, 6]]) and np.all(table[[0, 2, 4, 6]] < 9), "the ranks of the cards are out " \
+                                                                                  "of range.\n" + str(table)
+    assert np.all(-1 <= table[[1, 3, 5, 7]]) and np.all(table[[1, 3, 5, 7]] < 4), "the suits of the cards are out " \
+                                                                                  "of range.\n" + str(table)
+    new_table = np.zeros(8)
+    for i in range(0, 8, 2):
+        new_table[i: i + 2] = two_nbr_rep_swap_suit(table[i: i + 2], swap_suit1, swap_suit2)
+    return new_table
+
+
+def vector_rep_booster(vector: np.array, swap_suit1: int, swap_suit2: int) -> np.array:
+    """
+    expects a 36 entry vector and swaps the two given suits
+    :param vector: 36 entry vector
+    :param swap_suit1: one of the suits that should be swapped
+    :param swap_suit2: one of the suits that should be swapped
+    :return: a copy of 'vector' with the suits swapped
+    """
+    assert vector.shape == (36,)
+    assert np.all(0 <= vector) and np.all(vector < 2), "the doesn't carry the expected representation:\n" + str(vector)
+    assert 0 <= swap_suit1 < 4
+    assert 0 <= swap_suit2 < 4
+    swap_indices = np.arange(36)
+    swap_indices[swap_suit1 * 9: (swap_suit1 + 1) * 9] = np.arange(swap_suit2 * 9, (swap_suit2 + 1) * 9)
+    swap_indices[swap_suit2 * 9: (swap_suit2 + 1) * 9] = np.arange(swap_suit1 * 9, (swap_suit1 + 1) * 9)
+    new_vector = vector[swap_indices]
+    return new_vector
+
+
+def state_action_83_booster(state_action_vector: np.array) -> List[np.array]:
+    """
+    this function expects a state-action vector and outputs all permutations that are equivalent from a strategy point
+    of view. The expected scheme is as follows (sav := state_action_vector):
+      sav[ 0: 8] - table cards in the two-numbers representation
+      sav[ 8:44] - hand cards in the vector representation
+      sav[44:80] - the gone cards in the vector representation
+      sav[80:81] - will not be changed (how close player is to the prediction at the moment)
+      sav[81:83] - the action in the two-numbers representation
+    :param state_action_vector: the vector described above
+    :return: a list of all vector versions that are the same from a strategy point of view
+    """
+    assert state_action_vector.shape == (83,)
+    output = [np.copy(state_action_vector)]
+    for s1 in range(1, 4):
+        for s2 in range(s1 + 1, 4):
+            new_vector = np.zeros(83)
+            new_vector[:8] = two_nbr_rep_table_booster(state_action_vector[:8], s1, s2)
+            new_vector[8:44] = vector_rep_booster(state_action_vector[8:44], s1, s2)
+            new_vector[44:80] = vector_rep_booster(state_action_vector[44:80], s1, s2)
+            new_vector[80] = state_action_vector[80]
+            new_vector[81:83] = two_nbr_rep_swap_suit(state_action_vector[81:83], s1, s2)
+            output.append(new_vector)
+    return output
