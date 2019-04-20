@@ -24,11 +24,11 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 60000
+total_rounds = 150000
 rounds_until_save = 10000
 interval_to_print_stats = 1000
 
-use_batch_norm = False
+use_batch_norm = True
 
 
 def prediction_vanilla_ffn():
@@ -116,8 +116,8 @@ def main():
                     f.write(str(avg) + "\n")
                     total_diff = 0
 
-            pred_network.save_network(prediction_save_path + '_' + str((i + 1) * rounds_until_save))
-            strat_network.save_network(strategy_save_path + '_' + str((i + 1) * rounds_until_save))
+            pred_network.save_network(prediction_save_path + '_' + str((i + 1) * rounds_until_save) + '.h5')
+            strat_network.save_network(strategy_save_path + '_' + str((i + 1) * rounds_until_save) + '.h5')
 
 
 if __name__ == "__main__":
