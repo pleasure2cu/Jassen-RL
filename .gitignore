@@ -2,4 +2,5 @@ venv
 .idea
 saved_nets/prediction/
 saved_nets/strategy/
+stats.txt
 __pycache__
