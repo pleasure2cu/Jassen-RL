@@ -1,6 +1,5 @@
 venv
 .idea
-saved_nets\prediction\*
-saved_nets\strategy\*
+*.h5
 stats.txt
 __pycache__
