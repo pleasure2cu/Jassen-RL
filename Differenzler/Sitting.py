@@ -75,33 +75,32 @@ class Sitting:
                 self._players[i].end_round(points_made[i], -0.25)
 
         # make a whole heap of assertions to check the memory
-        added_pred = self._players[0]._player.prediction_network._replay_memory._items[-4:]
-        added_strat = self._players[0]._player.strategy_network._replay_memory._items[-36:]
+        added_pred = self._players[0]._player.prediction_network._replay_memory._items[-4*6:]
+        added_strat = self._players[0]._player.strategy_network._replay_memory._items[-36*6:]
 
         position_totals = 0
-        for i in range(4):
-            assert added_pred[i][1] == points_made[i], "The points made aren't correctly propagated to the " \
-                        "memory. Should be " + str(points_made[i]) + " but is " + str(added_pred[i][1])
-            assert np.array_equal(added_pred[i][0], self._players[i]._prediction_log), "The hand isn't " \
-                        "correctly propagated to the memory"
-            position_totals += added_pred[i][0][-1]
-            assert added_pred[i][0][-1] in [0, 1, 2, 3]
-        assert position_totals == np.sum(np.arange(4))
+        for j in range(6):
+            for i in range(4):
+                assert added_pred[j+i*6][1] == points_made[i], "The points made aren't correctly propagated to the " \
+                            "memory. Should be " + str(points_made[i]) + " but is " + str(added_pred[j+i*6][1])
+                position_totals += added_pred[j+i*6][0][-1]
+                assert added_pred[j+i*6][0][-1] in [0, 1, 2, 3]
+        assert position_totals == np.sum(np.arange(4)) * 6
 
         tmp_hands = np.zeros(36)
         tmp_gones = np.zeros(36)
-        for i in range(0, 36, 9):
+        for i in range(0, 36*6, 9*6):
             tmp_hands += added_strat[i][0][8:44]
             tmp_gones += added_strat[i][0][44:80]
         assert np.array_equal(np.ones(36), tmp_hands), "the start hands don't add up to a whole card set"
         assert np.sum(tmp_gones) == 6, "the start gone cards aren't empty"
 
-        assert sum([np.sum(x[0][8:44]) for x in added_strat]) == 4 * np.sum(np.arange(1, 10)), \
+        assert sum([np.sum(x[0][8:44]) for x in added_strat]) == 6 * 4 * np.sum(np.arange(1, 10)), \
             "the hand cards aren't kept track of correctly. Is " + str(sum([np.sum(x[8:44]) for x in added_strat])) \
-            + " should be " + str(4 * np.sum(np.arange(1, 10)))
-        assert sum([np.sum(x[0][44:80]) for x in added_strat]) == np.sum(np.arange(36)), \
+            + " should be " + str(6 * 4 * np.sum(np.arange(1, 10)))
+        assert sum([np.sum(x[0][44:80]) for x in added_strat]) == 6 * np.sum(np.arange(36)), \
             "the gone cards aren't kept track of correctly. Is " + str(sum([np.sum(x[0][44:80]) for x in added_strat])) \
-            + " should be " + str(4 * np.sum(np.arange(9)))
+            + " should be " + str(6 * 4 * np.sum(np.arange(9)))
 
         assert np.sum(points_made) == 157
         assert not np.any(points_made < 0)
