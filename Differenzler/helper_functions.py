@@ -160,13 +160,45 @@ def state_action_83_booster(state_action_vector: np.array) -> List[np.array]:
     """
     assert state_action_vector.shape == (83,)
     output = [np.copy(state_action_vector)]
-    for s1 in range(1, 4):
-        for s2 in range(s1 + 1, 4):
-            new_vector = np.zeros(83)
-            new_vector[:8] = two_nbr_rep_table_booster(state_action_vector[:8], s1, s2)
-            new_vector[8:44] = vector_rep_booster(state_action_vector[8:44], s1, s2)
-            new_vector[44:80] = vector_rep_booster(state_action_vector[44:80], s1, s2)
-            new_vector[80] = state_action_vector[80]
-            new_vector[81:83] = two_nbr_rep_swap_suit(state_action_vector[81:83], s1, s2)
-            output.append(new_vector)
+
+    def tmp_f(vector, s1, s2):
+        new_vector = np.zeros(83)
+        new_vector[:8] = two_nbr_rep_table_booster(vector[:8], s1, s2)
+        new_vector[8:44] = vector_rep_booster(vector[8:44], s1, s2)
+        new_vector[44:80] = vector_rep_booster(vector[44:80], s1, s2)
+        new_vector[80] = vector[80]
+        new_vector[81:83] = two_nbr_rep_swap_suit(vector[81:83], s1, s2)
+        output.append(new_vector)
+
+    for i in range(1, 4):
+        for j in range(i + 1, 4):
+            tmp_f(state_action_vector, i, j)
+
+    tmp_f(output[3], 1, 3)
+    tmp_f(output[1], 1, 3)
+
+    return output
+
+
+def prediction_state_37_booster(state_vector: np.array) -> List[np.array]:
+    """
+    takes the state vector used for prediction and outputs all versions that are the same from a strategy point of view
+    the vector is assumed to have the following schema:
+        sv[:36] - the hand cards in vector representation
+        sv[36] - the position at the table
+    :param state_vector: the 37 elements state vector
+    :return: list of all state vectors that are the same for strategy considerations
+    """
+    output = []
+    indices = np.arange(37, dtype=np.int)
+    for i in range(1, 4):
+        for j in range(1, 4):
+            for k in range(1, 4):
+                if len(np.unique([i, j, k])) != 3:
+                    continue
+                indices[9: 18] = np.arange(i*9, (i+1)*9, dtype=np.int)
+                indices[18: 27] = np.arange(j*9, (j+1)*9, dtype=np.int)
+                indices[27: 36] = np.arange(k*9, (k+1)*9, dtype=np.int)
+                addition = state_vector[indices]
+                output.append(addition)
     return output

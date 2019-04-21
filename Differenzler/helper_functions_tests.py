@@ -4,7 +4,7 @@ import numpy as np
 
 from helper_functions import translate_vector_to_two_number_representation, get_all_possible_actions, \
     get_winning_card_index, get_points_from_table, two_nbr_rep_swap_suit, two_nbr_rep_table_booster, vector_rep_booster, \
-    state_action_83_booster
+    state_action_83_booster, prediction_state_37_booster
 
 
 class TestTranslate_vector_to_two_number_representation(TestCase):
@@ -313,10 +313,103 @@ class TestState_action_83_booster(TestCase):
             two_nbr_rep_swap_suit(action, 2, 3)
         ])
 
+        table2 = np.array([
+            [3, 2],
+            [8, 3],
+            [-1, -1],
+            [4, 0]
+        ])
+        hand2 = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            0, 0, 1, 1, 0, 0, 0, 0, 0
+        ])
+        gone_cards2 = np.array([
+            1, 0, 0, 0, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            0, 1, 0, 0, 0, 0, 0, 1, 0,
+            0, 0, 1, 1, 1, 1, 0, 0, 0,
+        ])
+        action2 = np.array([2, 3])
+        sav5 = np.concatenate([np.reshape(table2, -1), hand2, gone_cards2, np.array([diff]), action2])
+
+        table3 = np.array([
+            [3, 3],
+            [8, 1],
+            [-1, -1],
+            [4, 0]
+        ])
+        hand3 = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            0, 0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0
+        ])
+        gone_cards3 = np.array([
+            1, 0, 0, 0, 0, 1, 0, 0, 0,
+            0, 1, 0, 0, 0, 0, 0, 1, 0,
+            0, 0, 1, 1, 1, 1, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0
+        ])
+        action3 = np.array([2, 1])
+        sav6 = np.concatenate([np.reshape(table3, -1), hand3, gone_cards3, np.array([diff]), action3])
         calc = state_action_83_booster(sav1)
-        truth = [sav1, sav2, sav3, sav4]
+        truth = [sav1, sav2, sav3, sav4, sav5, sav6]
         self.assertTrue(len(calc) == len(truth))
         for i in range(4):
             self.assertTrue(calc[i].shape == (83,))
             self.assertTrue(np.array_equal(calc[i], truth[i]))
         pass
+
+
+class TestPrediction_state_37_booster(TestCase):
+    def test_1(self):
+        original = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            3
+        ])
+        state1 = np.copy(original)
+        state2 = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            3
+        ])
+        state3 = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            0, 0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            3
+        ])
+        state4 = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            0, 0, 1, 1, 0, 0, 0, 0, 0,
+            3
+        ])
+        state5 = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            0, 0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            3
+        ])
+        state6 = np.array([
+            1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 1,
+            0, 0, 0, 0, 1, 1, 0, 0, 0,
+            0, 0, 1, 1, 0, 0, 0, 0, 0,
+            3
+        ])
+        truth = [state1, state2, state3, state4, state5, state6]
+        calc = prediction_state_37_booster(original)
+        self.assertTrue(len(truth) == len(calc), msg=len(calc))
+        for i in range(6):
+            self.assertTrue(np.array_equal(truth[i], calc[i]), msg=i)
