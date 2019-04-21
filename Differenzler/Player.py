@@ -1,8 +1,9 @@
-from typing import Tuple
+from typing import Tuple, List
 
-from Network import PredictionNetwork, StrategyNetwork
+from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork
 import numpy as np
 
+from Sample import RnnState, RnnNetInput
 from helper_functions import get_all_possible_actions, TNRepresentation
 
 
@@ -68,3 +69,31 @@ class Player:
         action = possible_actions[action_index]
         self.hand[action[0] + 9 * action[1]] = 0
         return np.concatenate((state, possible_actions[action_index])), possible_actions[action_index]
+
+
+class RnnPlayer(Player):
+    strategy_network: RnnStrategyNetwork
+
+    def play_card(self, state: RnnState, suit: int) -> Tuple[RnnNetInput, np.array]:
+        """
+        :param state: self-describing
+        :param suit: in [-1, 4]
+        :return: Tuple:
+                1. the state-action pair to add to the log
+                2. the action chosen
+        """
+        possible_actions = get_all_possible_actions(self.hand, suit)
+        n = len(possible_actions)
+        rnn_part = np.tile(state.rnn_part, (n, 1, 1))
+        aux_part_left_block = np.tile(state.aux_part, (n, 1))
+        aux_part = np.concatenate([aux_part_left_block, possible_actions], axis=1)
+        if np.random.binomial(1, self._strategy_exp):
+            action_index = np.random.randint(n)
+        else:
+            q_values = self.strategy_network.evaluate([rnn_part, aux_part])
+            action_index = np.argmax(q_values)
+        action = possible_actions[action_index]
+        self.hand[action[0] + 9 * action[1]] = 0
+        return RnnNetInput(rnn_part[action_index], aux_part[action_index]), action
+
+

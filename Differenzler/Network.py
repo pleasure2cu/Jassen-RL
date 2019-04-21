@@ -1,6 +1,10 @@
-from Memory import ReplayMemory
+from typing import List
+
+from Memory import ReplayMemory, RnnReplayMemory
 import keras
 import numpy as np
+
+from helper_functions import turn_rnn_samples_into_batch
 
 
 class Network:
@@ -47,5 +51,28 @@ class StrategyNetwork(Network):
         :param network_input: has to be in the format needed by the neural network
         :return: q-values
         """
+        output = self._neural_network.predict(network_input)
+        return np.reshape(output, -1)
+
+
+class RnnStrategyNetwork(StrategyNetwork):
+    _replay_memory: RnnReplayMemory
+
+    def train(self):
+        samples = self._replay_memory.draw_samples(self._batch_size)
+        n = len(samples)
+        if n == 0:
+            return
+        x_rnn, x_aux, y = turn_rnn_samples_into_batch(samples)
+        self._neural_network.train_on_batch([x_rnn, x_aux], y)
+
+    def evaluate(self, network_input: List[np.ndarray]):
+        """
+        :param network_input: has two entries, the first one needs to be 3 dimensional (input for RNN part). The second
+                part needs to be two dimensional (input for the auxiliary part)
+        :return: the returned values as vector (1D)
+        """
+        assert len(network_input[0].shape) == 3
+        assert len(network_input[1].shape) == 2
         output = self._neural_network.predict(network_input)
         return np.reshape(output, -1)

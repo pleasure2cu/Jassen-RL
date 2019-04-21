@@ -1,8 +1,9 @@
-from typing import Union
+from typing import Union, List, Tuple
 
 import numpy as np
 
-from Player import Player
+from Player import Player, RnnPlayer
+from Sample import RnnNetInput, RnnState, RnnSample
 from helper_functions import TNRepresentation, prediction_state_37_booster, state_action_83_booster
 
 
@@ -11,10 +12,14 @@ class PlayerInterlayer:
     _prediction_log: np.array
     _strategy_log: np.ndarray
     _round_index: int
+    _absolute_position_at_table: np.array  # 4 entries vector
 
-    def __init__(self, player: Player, size_of_one_strat_net_input: int):
+    def __init__(self, player: Player, size_of_one_strat_net_input: int, absolute_position_at_table: int):
         self._player = player
         self._strategy_log = np.empty((9, size_of_one_strat_net_input))
+        tmp = np.zeros(4)
+        tmp[absolute_position_at_table] = 1
+        self._absolute_position_at_table = tmp
 
     def receive_hand(self, hand: np.array):
         self._round_index = 0
@@ -28,8 +33,8 @@ class PlayerInterlayer:
         assert self._prediction_log[-1] in [0, 1, 2, 3]
         return prediction
 
-    def play_card(self, table_cards: np.ndarray, index_of_first_card: int, gone_cards: np.array, diff: int) \
-            -> TNRepresentation:
+    def play_card(self, table_cards: np.ndarray, index_of_first_card: int, gone_cards: np.array,
+                  diff: int) -> TNRepresentation:
         """
         plays a card according to the player object
         :param table_cards: table in the two-numbers-representation, in the absolute "coordinate system"
@@ -83,9 +88,66 @@ class PlayerInterlayer:
         # assertions for testing time
         for i in range(9):
             assert np.sum(self._strategy_log[i][8:44]) == 9 - i, "hand cards aren't kept track of correctly"
-            assert 4 * (i + 1) > np.sum(self._strategy_log[i][44:80]) >= 4 * i, "gone cards aren't kept track of correctly"
-            assert i == 0 or self._strategy_log[i][80] <= self._strategy_log[i-1][80]
+            assert 4 * (i + 1) > np.sum(
+                self._strategy_log[i][44:80]) >= 4 * i, "gone cards aren't kept track of correctly"
+            assert i == 0 or self._strategy_log[i][80] <= self._strategy_log[i - 1][80]
             for j in range(i + 1, 9):
                 assert not np.array_equal(self._strategy_log[i][-2:], self._strategy_log[j][-2:])
 
         self._strategy_log = np.empty(self._strategy_log.shape)
+
+
+class RnnPlayerInterlayer(PlayerInterlayer):
+    _player: RnnPlayer
+    _strategy_log: List[RnnNetInput]
+
+    def __init__(self, player: Player, absolute_position_at_table: int):
+        super().__init__(player, 1, absolute_position_at_table)
+        self._strategy_log = []
+
+    def play_card(self, table_cards: np.ndarray, index_of_first_card: int, gone_cards: np.array, diff: int,
+                  blie_history: List[Tuple[np.ndarray, int]]) -> TNRepresentation:
+        """
+        plays a card according to the player object
+        :param table_cards: table in the two-numbers-representation, in the absolute "coordinate system"
+        :param index_of_first_card: index of the first card that has been played inside the table
+        :param gone_cards: 36 entry vector with the gone cards
+        :param diff: predicted points minus the points made so far
+        :param blie_history: list of tuples where the first entry is the table of that round and the second the index
+                    of the player that started that blie
+        :return: card we want to play in the two-numbers-representation
+        """
+        # put together the rnn input
+        rnn_input_vector = np.zeros((len(blie_history) + 1) * 9)
+        for i in range(len(blie_history)):
+            rnn_input_vector[i * 9: i * 9 + 8] = np.reshape(blie_history[i][0], -1)
+            rnn_input_vector[i * 9 + 8] = blie_history[i][1]
+        rnn_input_vector[-9: -1] = np.reshape(table_cards, -1)
+        rnn_input_vector[-1] = index_of_first_card
+
+        # put together the dense input (position(4), table(8), hand(36), gone cards(36), diff(1))
+        dense_input_vector = np.concatenate((
+            self._absolute_position_at_table,
+            np.reshape(table_cards, -1),
+            self._player.hand,
+            gone_cards,
+            np.array([diff])
+        ))
+
+        # produce the input to the strategy network
+        state = RnnState(np.reshape(rnn_input_vector, (-1, 9)), dense_input_vector)
+
+        # get the action an keep it logged
+        net_input, action = self._player.play_card(state, int(table_cards[index_of_first_card][1]))
+        self._strategy_log.append(net_input)
+        self._round_index += 1
+        return action
+
+    def end_round(self, prediction_reward: Union[int, float], strategy_reward: Union[int, float]):
+        self._player.prediction_network.add_samples([
+            (self._prediction_log, prediction_reward)
+        ])
+        self._player.strategy_network.add_samples([
+            RnnSample(log_entry.rnn_input, log_entry.aux_input, strategy_reward) for log_entry in self._strategy_log
+        ])
+        self._strategy_log = []

@@ -3,6 +3,8 @@ from typing import Union, Tuple, List
 import keras
 import numpy as np
 
+from Sample import RnnSample
+
 TNRepresentation = np.array
 Sample = Tuple[np.array, Union[int, float]]
 
@@ -24,6 +26,7 @@ def get_all_possible_actions(hand: np.array, first_played_suit: int) -> np.ndarr
     :param first_played_suit: in [-1, 4]
     :return: all possible actions in two number representation as np.ndarray (first axis are the different options)
     """
+    assert first_played_suit in range(-1, 4), "the values is " + str(first_played_suit)
     if first_played_suit < 0 or not np.sum(hand[first_played_suit * 9: (first_played_suit + 1) * 9]):
         playable_cards = hand
     elif first_played_suit == 0:  # trump is played
@@ -61,6 +64,22 @@ def get_points_from_table(table: np.ndarray, last_round: bool) -> int:
     for card in table:
         total += color_points[card[0]] if card[1] > 0 else trump_points[card[0]]
     return total
+
+
+def turn_rnn_samples_into_batch(samples: List[RnnSample]) -> Tuple[np.ndarray, np.ndarray, np.array]:
+    assert len(samples) > 0
+
+    n = len(samples)
+    rnn_input_batch = np.zeros((n,) + samples[0].rnn_input.shape)
+    aux_input_batch = np.zeros((n,) + samples[1].aux_input.shape)
+    y_batch = np.zeros(n)
+    for i in range(n):
+        sample = samples[i]
+        rnn_input_batch[i] = sample.rnn_input
+        aux_input_batch[i] = sample.aux_input
+        y_batch[i] = sample.y
+
+    return rnn_input_batch, aux_input_batch, y_batch
 
 
 def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool):
