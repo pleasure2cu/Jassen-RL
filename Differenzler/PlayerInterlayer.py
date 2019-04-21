@@ -3,7 +3,7 @@ from typing import Union
 import numpy as np
 
 from Player import Player
-from helper_functions import TNRepresentation
+from helper_functions import TNRepresentation, prediction_state_37_booster, state_action_83_booster
 
 
 class PlayerInterlayer:
@@ -68,8 +68,18 @@ class PlayerInterlayer:
         :param strategy_reward:
         :return:
         """
-        self._player.prediction_network.add_samples([(self._prediction_log, prediction_reward)])
-        mem_entries = map(lambda x: (x, strategy_reward), self._strategy_log)
+        # add samples to the replay memory for predictions
+        prediction_state_vectors = prediction_state_37_booster(self._prediction_log)
+        prediction_samples = [(sv, prediction_reward) for sv in prediction_state_vectors]
+        self._player.prediction_network.add_samples(prediction_samples)
+
+        # add samples to the replay memory for strategy
+        strategy_state_action_vectors = []
+        for sav in self._strategy_log:
+            strategy_state_action_vectors += state_action_83_booster(sav)
+        strategy_samples = [(sav, strategy_reward) for sav in strategy_state_action_vectors]
+        self._player.strategy_network.add_samples(strategy_samples)
+
         # assertions for testing time
         for i in range(9):
             assert np.sum(self._strategy_log[i][8:44]) == 9 - i, "hand cards aren't kept track of correctly"
@@ -77,5 +87,5 @@ class PlayerInterlayer:
             assert i == 0 or self._strategy_log[i][80] <= self._strategy_log[i-1][80]
             for j in range(i + 1, 9):
                 assert not np.array_equal(self._strategy_log[i][-2:], self._strategy_log[j][-2:])
-        self._player.strategy_network.add_samples(list(mem_entries))
+
         self._strategy_log = np.empty(self._strategy_log.shape)
