@@ -1,3 +1,5 @@
+import datetime
+
 import keras
 import numpy as np
 from keras import Model, Input
@@ -25,7 +27,7 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 3000
+total_rounds = 500
 rounds_until_save = 30000
 interval_to_print_stats = 500
 
@@ -142,6 +144,7 @@ def main():
 
     # create one Sitting
     sitting = Sitting(players, debugging)
+    last_stop = datetime.datetime.now()
     with open('stats.txt', 'w') as f:
         f.write("// interval to print stats: " + str(interval_to_print_stats) + "\n")
         for i in range(total_rounds // rounds_until_save):
@@ -158,6 +161,8 @@ def main():
                     print("Average difference of one player:\t", avg)
                     losses_string = ', '.join([str(l) for l in np.array(total_losses) / interval_to_print_stats])
                     print("The losses are:\t", losses_string)
+                    print("It took:", datetime.datetime.now() - last_stop)
+                    last_stop = datetime.datetime.now()
                     print('')
                     f.write(str(i * rounds_until_save + j + 1))
                     f.write(str(avg) + "\n")
