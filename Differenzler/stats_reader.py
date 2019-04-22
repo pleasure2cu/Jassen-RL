@@ -2,7 +2,7 @@ import sys
 import matplotlib.pyplot as plt
 
 if len(sys.argv) == 2:
-    pool_size = sys.argv[1]
+    pool_size = int(sys.argv[1])
 else:
     pool_size = 10
 
