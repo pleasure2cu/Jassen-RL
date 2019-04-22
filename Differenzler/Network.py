@@ -23,17 +23,17 @@ class Network:
     def add_samples(self, samples: list):
         self._replay_memory.add_samples(samples)
 
-    def train(self):
+    def train(self) -> float:
         samples = self._replay_memory.draw_samples(self._batch_size)
         n = len(samples)
         if n == 0:
-            return
+            return -1
         x = np.zeros((n, samples[0][0].size))
         y = np.zeros(n)
         for i in range(n):
             x[i] = samples[i][0]
             y[i] = samples[i][1]
-        self._neural_network.train_on_batch(x, y)
+        return self._neural_network.train_on_batch(x, y)
 
     def save_network(self, file_path: str):
         self._neural_network.save(file_path)
@@ -58,13 +58,13 @@ class StrategyNetwork(Network):
 class RnnStrategyNetwork(StrategyNetwork):
     _replay_memory: RnnReplayMemory
 
-    def train(self):
+    def train(self) -> float:
         samples = self._replay_memory.draw_samples(self._batch_size)
         n = len(samples)
         if n == 0:
-            return
+            return -1
         x_rnn, x_aux, y = turn_rnn_samples_into_batch(samples)
-        self._neural_network.train_on_batch([x_rnn, x_aux], y)
+        return self._neural_network.train_on_batch([x_rnn, x_aux], y)
 
     def evaluate(self, network_input: List[np.ndarray]):
         """

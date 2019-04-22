@@ -123,17 +123,23 @@ def main():
     with open('stats.txt', 'w') as f:
         for i in range(total_rounds // rounds_until_save):
             total_diff = 0
+            total_loss = 0.0
             for j in range(rounds_until_save):
                 total_diff += sitting.play_full_round()
                 for network in networks:
-                    network.train()
+                    if network == networks[1]:
+                        total_loss += network.train()
+                    else:
+                        network.train()
                 if (i * rounds_until_save + j + 1) % interval_to_print_stats == 0:
                     print(str(i * rounds_until_save + j + 1), "rounds have been played")
                     avg = total_diff / 4 / interval_to_print_stats
                     print("Average difference of one player:\t", avg)
+                    print("The loss was:\t", total_loss / interval_to_print_stats)
                     print('')
                     f.write(str(avg) + "\n")
                     total_diff = 0
+                    total_loss = 0
 
             pred_network.save_network(prediction_save_path + '_' + str((i + 1) * rounds_until_save) + '.h5')
             strat_network.save_network(strategy_save_path + '_' + str((i + 1) * rounds_until_save) + '.h5')
