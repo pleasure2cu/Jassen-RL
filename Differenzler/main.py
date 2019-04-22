@@ -35,6 +35,9 @@ debugging = True
 if debugging and total_rounds > 10000:
     print("WARNING: you are still debugging")
 
+if total_rounds < rounds_until_save:
+    rounds_until_save = total_rounds
+
 
 def prediction_vanilla_ffn():
     net = keras.Sequential([
@@ -126,25 +129,27 @@ def main():
     # create one Sitting
     sitting = Sitting(players, debugging)
     with open('stats.txt', 'w') as f:
+        f.write("// " + str(interval_to_print_stats) + "\n")
         for i in range(total_rounds // rounds_until_save):
             total_diff = 0
-            total_loss = 0.0
+            total_losses = [0.0 for _ in range(len(networks))]
             for j in range(rounds_until_save):
                 total_diff += sitting.play_full_round()
-                for network in networks:
-                    if network == networks[1]:
-                        total_loss += network.train()
-                    else:
-                        network.train()
+                for net_i, network in enumerate(networks):
+                    total_losses[net_i] += network.train()
                 if (i * rounds_until_save + j + 1) % interval_to_print_stats == 0:
                     print(str(i * rounds_until_save + j + 1), "rounds have been played")
                     avg = total_diff / 4 / interval_to_print_stats
                     print("Average difference of one player:\t", avg)
-                    print("The loss was:\t", total_loss / interval_to_print_stats)
+                    losses = np.array(total_losses) / interval_to_print_stats
+                    losses_string = ', '.join([str(l) for l in np.array(total_losses) / interval_to_print_stats])
+                    print("The losses are:\t", losses_string)
                     print('')
+                    f.write(str(i * rounds_until_save + j + 1))
                     f.write(str(avg) + "\n")
+                    f.write(losses_string + "\n")
                     total_diff = 0
-                    total_loss = 0
+                    total_losses = [0.0 for _ in range(len(networks))]
 
             pred_network.save_network(prediction_save_path + '_' + str((i + 1) * rounds_until_save) + '.h5')
             strat_network.save_network(strategy_save_path + '_' + str((i + 1) * rounds_until_save) + '.h5')

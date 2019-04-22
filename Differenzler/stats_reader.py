@@ -7,7 +7,9 @@ else:
     pool_size = 10
 
 with open('stats.txt', 'r') as f:
-    data = list(map(lambda x: float(x.strip()), f.readlines()))
+    lines = f.readlines()
+    data_lines = filter(lambda line: not line.startswith("//"), lines)
+    data = list(map(lambda x: float(x.strip()), data_lines))
 
 output = []
 for i in range(0, len(data) - pool_size, pool_size // 2):
