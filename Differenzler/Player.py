@@ -82,6 +82,7 @@ class RnnPlayer(Player):
                 1. the state-action pair to add to the log
                 2. the action chosen
         """
+        assert suit in range(-1, 4), suit
         possible_actions = get_all_possible_actions(self.hand, suit)
         n = len(possible_actions)
         rnn_part = np.tile(state.rnn_part, (n, 1, 1))

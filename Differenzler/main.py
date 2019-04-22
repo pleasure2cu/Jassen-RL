@@ -24,11 +24,16 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 30000
-rounds_until_save = 10000
+total_rounds = 3000
+rounds_until_save = 1000
 interval_to_print_stats = 1000
 
 use_batch_norm = True
+debugging = True
+
+
+if debugging and total_rounds > 10000:
+    print("WARNING: you are still debugging")
 
 
 def prediction_vanilla_ffn():
@@ -119,7 +124,7 @@ def main():
     players = [RnnPlayerInterlayer(players[i], i) for i in range(4)]
 
     # create one Sitting
-    sitting = Sitting(players)
+    sitting = Sitting(players, debugging)
     with open('stats.txt', 'w') as f:
         for i in range(total_rounds // rounds_until_save):
             total_diff = 0

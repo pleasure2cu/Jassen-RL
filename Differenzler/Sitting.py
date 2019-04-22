@@ -8,9 +8,11 @@ from helper_functions import get_winning_card_index, get_points_from_table
 
 class Sitting:
     _players: List[RnnPlayerInterlayer]
+    _debugging: bool
 
-    def __init__(self, players: List[RnnPlayerInterlayer]):
+    def __init__(self, players: List[RnnPlayerInterlayer], debugging: bool):
         self._players = players
+        self._debugging = debugging
 
     def play_full_round(self) -> int:
         # distribute the cards to the players
@@ -40,9 +42,10 @@ class Sitting:
         gone_cards = np.zeros(36)
         blie_history: List[Tuple[np.ndarray, int]] = []
         for blie_index in range(9):
-            assert np.sum(gone_cards) == 4 * blie_index
-            assert not np.any(gone_cards < 0), "in the gone cards vector there are negative entries"
-            assert not np.any(gone_cards > 1), "in the gone cards vector there are entries > 1"
+            if self._debugging:
+                assert np.sum(gone_cards) == 4 * blie_index
+                assert not np.any(gone_cards < 0), "in the gone cards vector there are negative entries"
+                assert not np.any(gone_cards > 1), "in the gone cards vector there are entries > 1"
             table = np.ones((4, 2)) * -1
             table_suit = -1
             for i in range(4):
@@ -77,8 +80,45 @@ class Sitting:
             else:
                 self._players[i].end_round(points_made[i], -0.25)
 
-        assert np.sum(points_made) == 157
-        assert not np.any(points_made < 0)
+        if self._debugging:
+            # a whole heap of assertions
+            added_samples = [sub_list[-4:] for sub_list in self._players[0]._player.strategy_network._replay_memory._items]
+
+            # check that time series doesn't change from blie to blie or inside blie
+            for i in range(8):
+                j = i + 1
+                blie_i = added_samples[i]
+                blie_j = added_samples[j]
+                for k in range(3):
+                    assert np.array_equal(blie_i[k].rnn_input[:i], blie_j[k].rnn_input[:i]), \
+                        (blie_i[k].rnn_input[:i], blie_j[k].rnn_input[:i])
+                    assert np.array_equal(blie_j[k].rnn_input[:i], blie_j[k+1].rnn_input[:i]), \
+                        (blie_j[k].rnn_input[:i], blie_j[k+1].rnn_input[:i])
+
+            # check that the absolute position is correct in all samples
+            for i in range(9):
+                blie = added_samples[i]
+                for j in range(4):
+                    tmp = np.zeros(4)
+                    tmp[j] = 1
+                    assert np.array_equal(blie[j].aux_input[:4], tmp), (j, blie[j].aux_input[:4])
+
+            # check that in each blie over all players only 4 unique cards are in the time series (3 cards, once the -1)
+            for blie in added_samples:
+                numbers = []
+                for i in range(4):
+                    numbers += [blie[i].rnn_input[-1][j]+blie[i].rnn_input[-1][j+1]*9 for j in range(0, 8, 2)]
+                assert np.unique(numbers).size == 4, (np.unique(numbers).size, np.unique(numbers))
+                assert -10 in numbers
+
+            # check that the last entry and the table in the sample is the same
+            for blie in added_samples:
+                for sample in blie:
+                    assert np.array_equal(sample.rnn_input[-1][:8], sample.aux_input[4: 12]), \
+                        (sample.rnn_input[-1][:8], sample.aux_input[4: 12])
+
+            assert np.sum(points_made) == 157
+            assert not np.any(points_made < 0)
 
         # just for stat
         return int(np.sum(absolute_diff))
