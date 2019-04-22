@@ -4,7 +4,7 @@ import numpy as np
 
 from Player import Player, RnnPlayer
 from Sample import RnnNetInput, RnnState, RnnSample, MultiPredictionSample
-from helper_functions import TNRepresentation, prediction_state_37_booster, state_action_83_booster
+from helper_functions import TNRepresentation, prediction_state_37_booster, state_action_83_booster, rnn_sample_booster
 
 
 class PlayerInterlayer:
@@ -163,10 +163,15 @@ class RnnMultiPlayerInterlayer(RnnPlayerInterlayer):
     
     def end_round(self, prediction_reward: Union[int, float], strategy_reward: Union[int, float]):
         self._player.prediction_network.add_samples([
-            MultiPredictionSample(self._prediction_log, self._prediction_log_prediction, prediction_reward)
+            MultiPredictionSample(s, self._prediction_log_prediction, prediction_reward) for s in
+            prediction_state_37_booster(self._prediction_log)
         ])
-        self._player.strategy_network.add_samples([
+        sample_seeds = [
             RnnSample(log_entry.rnn_input, log_entry.aux_input, strategy_reward) for log_entry in self._strategy_log
-        ])
+        ]
+        augmented_samples = []
+        for sample_seed in sample_seeds:
+            augmented_samples += rnn_sample_booster(sample_seed)
+        self._player.strategy_network.add_samples(augmented_samples)
         self._strategy_log = []
 

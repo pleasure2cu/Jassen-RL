@@ -199,6 +199,39 @@ def state_action_83_booster(state_action_vector: np.array) -> List[np.array]:
     return output
 
 
+def time_series_booster(series: np.ndarray) -> List[np.ndarray]:
+    assert len(series.shape) == 2
+    output = [series]
+
+    def tmp_f(vector, i, j):
+        tmp = np.zeros_like(vector)
+        for k in range(len(vector)):
+            tmp[k] = np.concatenate([two_nbr_rep_table_booster(vector[k][:8], i, j), vector[k][-1:]])
+        output.append(tmp)
+
+    for s1 in range(1, 4):
+        for s2 in range(s1 + 1, 4):
+            if s1 == s2:
+                continue
+            tmp_f(series, s1, s2)
+
+    tmp_f(output[3], 1, 3)
+    tmp_f(output[1], 1, 3)
+
+    return output
+
+
+def rnn_sample_booster(rnn_sample: RnnSample) -> List[RnnSample]:
+    rnn_vecotrs = time_series_booster(rnn_sample.rnn_input)
+    aux_vectors = np.concatenate([
+        np.tile(rnn_sample.aux_input[:4], (6, 1)),
+        state_action_83_booster(rnn_sample.aux_input[4:])
+    ], axis=1)
+
+    output = [RnnSample(rnn_vecotrs[i], aux_vectors[i], rnn_sample.y) for i in range(6)]
+    return output
+
+
 def prediction_state_37_booster(state_vector: np.array) -> List[np.array]:
     """
     takes the state vector used for prediction and outputs all versions that are the same from a strategy point of view

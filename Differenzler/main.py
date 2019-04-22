@@ -30,7 +30,7 @@ rounds_until_save = 30000
 interval_to_print_stats = 500
 
 use_batch_norm = True
-debugging = True
+debugging = False
 
 
 if debugging and total_rounds > 10000:
@@ -149,8 +149,9 @@ def main():
             total_losses = [0.0 for _ in range(len(networks))]
             for j in range(rounds_until_save):
                 total_diff += sitting.play_full_round()
-                for net_i, network in enumerate(networks):
-                    total_losses[net_i] += network.train()
+                for _ in range(8):  # just so that we actually learn a few times
+                    for net_i, network in enumerate(networks):
+                        total_losses[net_i] += network.train()
                 if (i * rounds_until_save + j + 1) % interval_to_print_stats == 0:
                     print(str(i * rounds_until_save + j + 1), "rounds have been played")
                     avg = total_diff / 4 / interval_to_print_stats

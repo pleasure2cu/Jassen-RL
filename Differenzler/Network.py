@@ -94,7 +94,7 @@ class RnnStrategyNetwork(StrategyNetwork):
         x_rnn, x_aux, y = turn_rnn_samples_into_batch(samples)
         return self._neural_network.train_on_batch([x_rnn, x_aux], y)
 
-    def evaluate(self, network_input: List[np.ndarray]):
+    def evaluate(self, network_input: List[np.ndarray]) -> np.ndarray:
         """
         :param network_input: has two entries, the first one needs to be 3 dimensional (input for RNN part). The second
                 part needs to be two dimensional (input for the auxiliary part)
