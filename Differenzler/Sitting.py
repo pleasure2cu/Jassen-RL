@@ -76,9 +76,9 @@ class Sitting:
         for i in range(len(self._players)):
             # rewards for the strategy are chosen s.t. the expected value is 0
             if i == round_winner_index:
-                self._players[i].end_round(points_made[i], 75)
+                self._players[i].end_round(75, 75)
             else:
-                self._players[i].end_round(points_made[i], -25)
+                self._players[i].end_round(-25, -25)
 
         if self._debugging:
             # a whole heap of assertions

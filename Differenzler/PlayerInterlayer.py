@@ -3,7 +3,7 @@ from typing import Union, List, Tuple
 import numpy as np
 
 from Player import Player, RnnPlayer
-from Sample import RnnNetInput, RnnState, RnnSample
+from Sample import RnnNetInput, RnnState, RnnSample, MultiPredictionSample
 from helper_functions import TNRepresentation, prediction_state_37_booster, state_action_83_booster
 
 
@@ -151,3 +151,22 @@ class RnnPlayerInterlayer(PlayerInterlayer):
             RnnSample(log_entry.rnn_input, log_entry.aux_input, strategy_reward) for log_entry in self._strategy_log
         ])
         self._strategy_log = []
+
+
+class RnnMultiPlayerInterlayer(RnnPlayerInterlayer):
+    _prediction_log_prediction: int
+
+    def make_prediction(self, position_at_table: int) -> int:
+        prediction = super(RnnMultiPlayerInterlayer, self).make_prediction(position_at_table)
+        self._prediction_log_prediction = prediction
+        return prediction
+    
+    def end_round(self, prediction_reward: Union[int, float], strategy_reward: Union[int, float]):
+        self._player.prediction_network.add_samples([
+            MultiPredictionSample(self._prediction_log, self._prediction_log_prediction, prediction_reward)
+        ])
+        self._player.strategy_network.add_samples([
+            RnnSample(log_entry.rnn_input, log_entry.aux_input, strategy_reward) for log_entry in self._strategy_log
+        ])
+        self._strategy_log = []
+

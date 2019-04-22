@@ -1,11 +1,12 @@
 import keras
+import numpy as np
 from keras import Model, Input
-from keras.layers import Dense, BatchNormalization, np, Activation, LSTM
+from keras.layers import Dense, BatchNormalization, Activation, LSTM
 
-from Memory import ReplayMemory, RnnReplayMemory
-from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork
+from Memory import ReplayMemory, RnnReplayMemory, MultiReplayMemory
+from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork, MultiPredictionNetwork
 from Player import Player, RnnPlayer
-from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer
+from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer, RnnMultiPlayerInterlayer
 from Sitting import Sitting
 from helper_functions import resnet_block
 
@@ -25,8 +26,8 @@ strategy_exploration_rate = 0.07
 size_of_one_strat_net_input = 83
 
 total_rounds = 3000
-rounds_until_save = 1000
-interval_to_print_stats = 1000
+rounds_until_save = 30000
+interval_to_print_stats = 500
 
 use_batch_norm = True
 debugging = True
@@ -75,6 +76,19 @@ def prediction_resnet():
     return model
 
 
+def prediction_multi_resnet():
+    dense_output_size = 100
+    net_input = Input(shape=(37,))
+    layer_1 = Dense(dense_output_size, activation='relu')(net_input)
+    layer_2 = Dense(dense_output_size, activation='relu')(layer_1)
+    layer_3 = Dense(dense_output_size, activation='relu')(layer_2)
+    res_sum = keras.layers.add([layer_1, layer_3])
+    final_tensor = Dense(79)(res_sum)
+    model = Model(inputs=net_input, outputs=final_tensor)
+    model.compile(optimizer='rmsprop', loss='mse')
+    return model
+
+
 def strategy_resnet():
     dense_output_size = 120
     net_input = Input(shape=(size_of_one_strat_net_input,))
@@ -111,11 +125,11 @@ def strategy_rnn_resnet():
 
 def main():
     # create one ReplayMemory for each network kind
-    pred_memory = ReplayMemory(prediction_replay_memory_size)
+    pred_memory = MultiReplayMemory(prediction_replay_memory_size)
     strat_memory = RnnReplayMemory(strategy_replay_memory_size)
 
     # create one Network pair
-    pred_network = PredictionNetwork(prediction_resnet(), pred_memory, prediction_net_batch_size)
+    pred_network = MultiPredictionNetwork(prediction_multi_resnet(), pred_memory, prediction_net_batch_size)
     strat_network = RnnStrategyNetwork(strategy_rnn_resnet(), strat_memory, strategy_net_batch_size)
     networks = [pred_network, strat_network]
 
@@ -124,12 +138,12 @@ def main():
                for _ in range(4)]
 
     # create one PlayerInterlayer for each player
-    players = [RnnPlayerInterlayer(players[i], i) for i in range(4)]
+    players = [RnnMultiPlayerInterlayer(players[i], i) for i in range(4)]
 
     # create one Sitting
     sitting = Sitting(players, debugging)
     with open('stats.txt', 'w') as f:
-        f.write("// " + str(interval_to_print_stats) + "\n")
+        f.write("// interval to print stats: " + str(interval_to_print_stats) + "\n")
         for i in range(total_rounds // rounds_until_save):
             total_diff = 0
             total_losses = [0.0 for _ in range(len(networks))]
@@ -141,7 +155,6 @@ def main():
                     print(str(i * rounds_until_save + j + 1), "rounds have been played")
                     avg = total_diff / 4 / interval_to_print_stats
                     print("Average difference of one player:\t", avg)
-                    losses = np.array(total_losses) / interval_to_print_stats
                     losses_string = ', '.join([str(l) for l in np.array(total_losses) / interval_to_print_stats])
                     print("The losses are:\t", losses_string)
                     print('')
