@@ -2,9 +2,10 @@ from unittest import TestCase
 
 import numpy as np
 
+from Sample import RnnSample
 from helper_functions import translate_vector_to_two_number_representation, get_all_possible_actions, \
     get_winning_card_index, get_points_from_table, two_nbr_rep_swap_suit, two_nbr_rep_table_booster, vector_rep_booster, \
-    state_action_83_booster, prediction_state_37_booster
+    state_action_83_booster, prediction_state_37_booster, time_series_booster, rnn_sample_booster
 
 
 class TestTranslate_vector_to_two_number_representation(TestCase):
@@ -413,3 +414,115 @@ class TestPrediction_state_37_booster(TestCase):
         self.assertTrue(len(truth) == len(calc), msg=len(calc))
         for i in range(6):
             self.assertTrue(np.array_equal(truth[i], calc[i]), msg=i)
+
+
+class TestTime_series_booster(TestCase):
+    def test_1(self):
+        time_series = np.array([[
+            [3, 1],
+            [8, 2],
+            [1, 0],
+            [4, 0]
+        ],
+            [
+                [4, 3],
+                [7, 2],
+                [-1, -1],
+                [2, 3]
+            ]
+        ])
+        t1 = np.array([[
+            [3, 2],
+            [8, 1],
+            [1, 0],
+            [4, 0]
+        ],
+            [
+                [4, 3],
+                [7, 1],
+                [-1, -1],
+                [2, 3]
+            ]
+        ])
+        t2 = np.array([[
+            [3, 3],
+            [8, 2],
+            [1, 0],
+            [4, 0]
+        ],
+            [
+                [4, 1],
+                [7, 2],
+                [-1, -1],
+                [2, 1]
+            ]
+        ])
+        t3 = np.array([[
+            [3, 1],
+            [8, 3],
+            [1, 0],
+            [4, 0]
+        ],
+            [
+                [4, 2],
+                [7, 3],
+                [-1, -1],
+                [2, 2]
+            ]
+        ])
+        t5 = np.array([[
+            [3, 2],
+            [8, 3],
+            [1, 0],
+            [4, 0]
+        ],
+            [
+                [4, 1],
+                [7, 3],
+                [-1, -1],
+                [2, 1]
+            ]
+        ])
+        t4 = np.array([[
+            [3, 3],
+            [8, 1],
+            [1, 0],
+            [4, 0]
+        ],
+            [
+                [4, 2],
+                [7, 1],
+                [-1, -1],
+                [2, 2]
+            ]
+        ])
+        truth = [time_series, t1, t2, t3, t4, t5]
+        truth = map(lambda x: np.reshape(x, (2, 8)), truth)
+        truth = list(map(lambda x: np.concatenate([x, np.array([[1], [2]])], axis=1), truth))
+        calc = time_series_booster(truth[0])
+        assert len(calc) == 6, len(calc)
+        for i in range(6):
+            assert np.array_equal(truth[i], calc[i]), (i, truth[i], calc[i])
+
+
+class TestRnn_sample_booster(TestCase):
+    def test_1(self):
+        rnn_part = np.array([
+            [3, 2, 8, 3, 1, 0, 4, 0, 1],
+            [4, 1, 7, 3, -1, -1, 2, 1, 3]
+        ])
+        aux_part = np.array([
+            0, 1, 0, 0,
+            4, 1, 7, 3, -1, -1, 2, 1,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+            -14,
+            2, 3
+        ])
+        seed = RnnSample(rnn_part, aux_part, 75)
+        calc = rnn_sample_booster(seed)
+
+        # all parts themselves are tested. The only really plausible issue that could arise, is that the boosted
+        # rnn_parts aren't paired up with the correct aux_parts
+        for c in calc:
+            assert np.array_equal(c.rnn_input[-1][:8], c.aux_input[4:12]), (c.rnn_input[-1][:8], c.aux_input[4:12])
