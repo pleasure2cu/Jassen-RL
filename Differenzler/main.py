@@ -31,12 +31,19 @@ total_rounds = 500
 rounds_until_save = 30000
 interval_to_print_stats = 500
 
+only_train_in_turn = True
+turn_size = 2
+
 use_batch_norm = True
 debugging = False
 
-
 if debugging and total_rounds > 10000:
     print("WARNING: you are still debugging")
+
+if turn_size < rounds_until_save and rounds_until_save % turn_size != 0 or \
+        rounds_until_save < turn_size and turn_size % rounds_until_save != 0:
+    print("WARNING: turn_size (" + str(turn_size) + ") and rounds_until_save (" + str(rounds_until_save) + ") aren't "
+          "multiple of each other")
 
 if total_rounds < rounds_until_save:
     rounds_until_save = total_rounds
@@ -152,9 +159,13 @@ def main():
             total_losses = [0.0 for _ in range(len(networks))]
             for j in range(rounds_until_save):
                 total_diff += sitting.play_full_round()
-                for _ in range(8):  # just so that we actually learn a few times
-                    for net_i, network in enumerate(networks):
-                        total_losses[net_i] += network.train()
+                for _ in range(1):  # just so that we actually learn a few times
+                    if only_train_in_turn:
+                        index_to_train = (i * total_rounds + j) // turn_size % len(networks)
+                        total_losses[index_to_train] += networks[index_to_train].train()
+                    else:
+                        for net_i, network in enumerate(networks):
+                            total_losses[net_i] += network.train()
                 if (i * rounds_until_save + j + 1) % interval_to_print_stats == 0:
                     print(str(i * rounds_until_save + j + 1), "rounds have been played")
                     avg = total_diff / 4 / interval_to_print_stats
