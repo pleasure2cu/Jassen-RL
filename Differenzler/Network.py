@@ -12,11 +12,13 @@ class Network:
     _replay_memory: ReplayMemory
     _neural_network: keras
     _batch_size: int
+    _can_train: bool
 
-    def __init__(self, neural_network: keras, memory: ReplayMemory, batch_size: int):
+    def __init__(self, neural_network: keras, memory: ReplayMemory, batch_size: int, can_train: bool):
         self._neural_network = neural_network
         self._replay_memory = memory
         self._batch_size = batch_size
+        self._can_train = can_train
 
     def evaluate(self, network_input: np.ndarray) -> np.array:
         pass
@@ -25,6 +27,8 @@ class Network:
         self._replay_memory.add_samples(samples)
 
     def train(self) -> float:
+        if not self._can_train:
+            return -1
         samples = self._replay_memory.draw_samples(self._batch_size)
         n = len(samples)
         if n == 0:
@@ -47,9 +51,9 @@ class PredictionNetwork(Network):
 
 
 class MultiPredictionNetwork(PredictionNetwork):
-    def __init__(self, neural_network: keras, memory: ReplayMemory, batch_size: int):
+    def __init__(self, neural_network: keras, memory: ReplayMemory, batch_size: int, can_train: bool):
         assert type(memory) == MultiReplayMemory, type(memory)
-        super().__init__(neural_network, memory, batch_size)
+        super().__init__(neural_network, memory, batch_size, can_train)
 
     def evaluate(self, network_input: np.ndarray):
         output_activations = self._neural_network.predict(np.reshape(network_input, (1, -1)))
@@ -57,6 +61,8 @@ class MultiPredictionNetwork(PredictionNetwork):
         return np.argmax(np.reshape(output_activations, -1)) * skew
 
     def train(self) -> float:
+        if not self._can_train:
+            return -1
         samples: List[MultiPredictionSample] = self._replay_memory.draw_samples(self._batch_size)
         n = len(samples)
         if n == 0:
@@ -87,6 +93,8 @@ class RnnStrategyNetwork(StrategyNetwork):
     _replay_memory: RnnReplayMemory
 
     def train(self) -> float:
+        if not self._can_train:
+            return -1
         samples = self._replay_memory.draw_samples(self._batch_size)
         n = len(samples)
         if n == 0:

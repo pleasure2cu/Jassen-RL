@@ -138,8 +138,8 @@ def main():
     strat_memory = RnnReplayMemory(strategy_replay_memory_size)
 
     # create one Network pair
-    pred_network = MultiPredictionNetwork(prediction_multi_resnet(), pred_memory, prediction_net_batch_size)
-    strat_network = RnnStrategyNetwork(strategy_rnn_resnet(), strat_memory, strategy_net_batch_size)
+    pred_network = MultiPredictionNetwork(prediction_multi_resnet(), pred_memory, prediction_net_batch_size, True)
+    strat_network = RnnStrategyNetwork(strategy_rnn_resnet(), strat_memory, strategy_net_batch_size, True)
     networks = [pred_network, strat_network]
 
     # create 4 players, each with the same Networks
