@@ -29,9 +29,9 @@ size_of_one_strat_net_input = 83
 
 total_rounds = 500
 rounds_until_save = 30000
-interval_to_print_stats = 500
+interval_to_print_stats = 100
 
-only_train_in_turn = True
+only_train_in_turn = False
 turn_size = 2
 
 use_batch_norm = True
@@ -40,10 +40,10 @@ debugging = False
 if debugging and total_rounds > 10000:
     print("WARNING: you are still debugging")
 
-if turn_size < rounds_until_save and rounds_until_save % turn_size != 0 or \
-        rounds_until_save < turn_size and turn_size % rounds_until_save != 0:
+if only_train_in_turn and (turn_size < rounds_until_save and rounds_until_save % turn_size != 0 or
+                           rounds_until_save < turn_size and turn_size % rounds_until_save != 0):
     print("WARNING: turn_size (" + str(turn_size) + ") and rounds_until_save (" + str(rounds_until_save) + ") aren't "
-          "multiple of each other")
+                               "multiple of each other")
 
 if total_rounds < rounds_until_save:
     rounds_until_save = total_rounds
@@ -134,11 +134,11 @@ def strategy_rnn_resnet():
 
 def main():
     # create one ReplayMemory for each network kind
-    pred_memory = MultiReplayMemory(prediction_replay_memory_size)
+    pred_memory = ReplayMemory(prediction_replay_memory_size)
     strat_memory = RnnReplayMemory(strategy_replay_memory_size)
 
     # create one Network pair
-    pred_network = MultiPredictionNetwork(prediction_multi_resnet(), pred_memory, prediction_net_batch_size, True)
+    pred_network = PredictionNetwork(prediction_resnet(), pred_memory, prediction_net_batch_size, True)
     strat_network = RnnStrategyNetwork(strategy_rnn_resnet(), strat_memory, strategy_net_batch_size, True)
     networks = [pred_network, strat_network]
 
@@ -147,7 +147,7 @@ def main():
                for _ in range(4)]
 
     # create one PlayerInterlayer for each player
-    players = [RnnMultiPlayerInterlayer(players[i], i) for i in range(4)]
+    players = [RnnPlayerInterlayer(players[i], i) for i in range(4)]
 
     # create one Sitting
     sitting = Sitting(players, debugging)

@@ -75,10 +75,11 @@ class Sitting:
         round_winner_index = np.argmin(absolute_diff)
         for i in range(len(self._players)):
             # rewards for the strategy are chosen s.t. the expected value is 0
-            if i == round_winner_index:
-                self._players[i].end_round(75, 75)
-            else:
-                self._players[i].end_round(-25, -25)
+            # if i == round_winner_index:
+            #    self._players[i].end_round(75, 75)
+            # else:
+            #    self._players[i].end_round(-25, -25)
+            self._players[i].end_round(points_made[i], -1 * absolute_diff[i])
 
         if self._debugging:
             # a whole heap of assertions
