@@ -30,8 +30,6 @@ class Sitting:
         for i in range(4):
             predictions[i] = self._players[i].make_prediction((i - player_index) % 4)
 
-        # predictions = predictions // 2
-
         # assertion
         tmp_hand = np.zeros(36)
         for i in range(4):
@@ -72,14 +70,17 @@ class Sitting:
 
         # compute rewards and give them
         absolute_diff = np.absolute(predictions - points_made)
-        round_winner_index = np.argmin(absolute_diff)
+        # round_winner_index = np.argmin(absolute_diff)
         for i in range(len(self._players)):
             # rewards for the strategy are chosen s.t. the expected value is 0
             # if i == round_winner_index:
             #    self._players[i].end_round(75, 75)
             # else:
             #    self._players[i].end_round(-25, -25)
-            self._players[i].end_round(points_made[i], -1 * absolute_diff[i])
+            strat_y = -1 * absolute_diff[i]
+            if points_made[i] + 5 <= predictions[i]:  # punish defensive players
+                strat_y -= 5
+            self._players[i].end_round(points_made[i], strat_y)
 
         if self._debugging:
             # a whole heap of assertions
