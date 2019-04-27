@@ -175,7 +175,7 @@ def main():
                     print("It took:", datetime.datetime.now() - last_stop)
                     last_stop = datetime.datetime.now()
                     print('')
-                    f.write(str(i * rounds_until_save + j + 1))
+                    f.write(str(i * rounds_until_save + j + 1) + "\n")
                     f.write(str(avg) + "\n")
                     f.write(losses_string + "\n")
                     total_diff = 0
