@@ -16,8 +16,8 @@ prediction_save_path = './saved_nets/prediction/prediction'
 strategy_save_path = './saved_nets/strategy/strategy'
 
 # Parameters
-prediction_replay_memory_size = 36 * 200
-strategy_replay_memory_size = 4 * 200
+prediction_replay_memory_size = 100000
+strategy_replay_memory_size = 20000
 
 prediction_net_batch_size = 64
 strategy_net_batch_size = 128
@@ -27,9 +27,9 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 500
-rounds_until_save = 30000
-interval_to_print_stats = 100
+total_rounds = 500000
+rounds_until_save = 50000
+interval_to_print_stats = 10000
 
 only_train_in_turn = False
 turn_size = 2
@@ -114,7 +114,7 @@ def strategy_resnet():
 
 
 def strategy_rnn_resnet():
-    dense_output_size = 120
+    dense_output_size = 180
     rnn_output_size = 32
     rnn_input = Input(shape=(None, 9))
     rnn_output = LSTM(rnn_output_size)(rnn_input)
@@ -124,7 +124,7 @@ def strategy_rnn_resnet():
     if use_batch_norm:
         net = BatchNormalization()(net)
     net = Activation('relu')(net)
-    for _ in range(5):
+    for _ in range(3):
         net = resnet_block(net, dense_output_size, use_batch_norm)
     final_tensor = Dense(1)(net)
     model = Model(inputs=[rnn_input, aux_input], outputs=final_tensor)
@@ -187,5 +187,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    prediction_resnet().summary()
-    strategy_resnet().summary()
