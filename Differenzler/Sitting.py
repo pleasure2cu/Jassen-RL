@@ -78,8 +78,10 @@ class Sitting:
             # else:
             #    self._players[i].end_round(-25, -25)
             strat_y = -1 * absolute_diff[i]
-            if points_made[i] + 5 <= predictions[i]:  # punish defensive players
-                strat_y -= 5
+            if points_made[i] + 5 < predictions[i]:  # punish defensive players
+                strat_y -= 8
+            elif points_made[i] < predictions[i]:  # punish defensive players
+                strat_y -= 2
             self._players[i].end_round(points_made[i], strat_y)
 
         if self._debugging:

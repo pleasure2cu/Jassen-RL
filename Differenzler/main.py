@@ -27,7 +27,7 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 500000
+total_rounds = 200000
 rounds_until_save = 50000
 interval_to_print_stats = 10000
 
@@ -114,7 +114,7 @@ def strategy_resnet():
 
 
 def strategy_rnn_resnet():
-    dense_output_size = 180
+    dense_output_size = 270
     rnn_output_size = 32
     rnn_input = Input(shape=(None, 9))
     rnn_output = LSTM(rnn_output_size)(rnn_input)
