@@ -154,9 +154,9 @@ def main():
     last_stop = datetime.datetime.now()
     with open('stats.txt', 'w') as f:
         f.write("// interval to print stats: " + str(interval_to_print_stats) + "\n")
+        total_diff = 0
+        total_losses = [0.0 for _ in range(len(networks))]
         for i in range(total_rounds // rounds_until_save):
-            total_diff = 0
-            total_losses = [0.0 for _ in range(len(networks))]
             for j in range(rounds_until_save):
                 total_diff += sitting.play_full_round()
                 for _ in range(1):  # just so that we actually learn a few times
