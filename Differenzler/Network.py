@@ -38,6 +38,8 @@ class Network:
         for i in range(n):
             x[i] = samples[i][0]
             y[i] = samples[i][1]
+        print(x)
+        print(y)
         return self._neural_network.train_on_batch(x, y)
 
     def save_network(self, file_path: str):
