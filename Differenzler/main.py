@@ -1,17 +1,14 @@
 import datetime
 import random
 
-import keras
 import numpy as np
-from keras import Model, Input
-from keras.layers import Dense, BatchNormalization, Activation, LSTM
 
 from Memory import ReplayMemory, RnnReplayMemory, MultiReplayMemory
 from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork, MultiPredictionNetwork
 from Player import Player, RnnPlayer
 from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer, RnnMultiPlayerInterlayer
 from Sitting import Sitting
-from helper_functions import resnet_block
+from main_helper_methods import prediction_resnet, strategy_rnn_resnet, normal_pred_y_func, normal_strat_y_func
 
 from numpy.random import seed
 seed(1)
@@ -56,97 +53,6 @@ if total_rounds < rounds_until_save:
     rounds_until_save = total_rounds
 
 
-def normal_pred_y_func(made_points: int):
-    return made_points
-
-
-def normal_strat_y_func(predicted_points: int, made_points: int):
-    return -1 * np.absolute(predicted_points - made_points)
-
-
-def prediction_vanilla_ffn():
-    net = keras.Sequential([
-        keras.layers.Dense(30, activation='relu', input_shape=(37,)),
-        keras.layers.Dense(30, activation='relu'),
-        keras.layers.Dense(1)
-    ])
-    net.compile(optimizer='rmsprop', loss='mse')
-    return net
-
-
-def strategy_vanilla_ffn():
-    net = keras.Sequential([
-        keras.layers.Dense(120, activation='relu', input_shape=(size_of_one_strat_net_input,)),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(60, activation='relu'),
-        keras.layers.Dense(1)
-    ])
-    net.compile(optimizer='rmsprop', loss='mse')
-    return net
-
-
-def prediction_resnet():
-    dense_output_size = 50
-    net_input = Input(shape=(37,))
-    layer_1 = Dense(dense_output_size, activation='relu')(net_input)
-    layer_2 = Dense(dense_output_size, activation='relu')(layer_1)
-    layer_3 = Dense(dense_output_size, activation='relu')(layer_2)
-    res_sum = keras.layers.add([layer_1, layer_3])
-    final_tensor = Dense(1)(res_sum)
-    model = Model(inputs=net_input, outputs=final_tensor)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
-
-
-def prediction_multi_resnet():
-    dense_output_size = 100
-    net_input = Input(shape=(37,))
-    layer_1 = Dense(dense_output_size, activation='relu')(net_input)
-    layer_2 = Dense(dense_output_size, activation='relu')(layer_1)
-    layer_3 = Dense(dense_output_size, activation='relu')(layer_2)
-    res_sum = keras.layers.add([layer_1, layer_3])
-    final_tensor = Dense(79)(res_sum)
-    model = Model(inputs=net_input, outputs=final_tensor)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
-
-
-def strategy_resnet():
-    dense_output_size = 120
-    net_input = Input(shape=(size_of_one_strat_net_input,))
-    net = Dense(dense_output_size)(net_input)
-    if use_batch_norm:
-        net = BatchNormalization()(net)
-    net = Activation('relu')(net)
-    for _ in range(3):
-        net = resnet_block(net, dense_output_size, use_batch_norm)
-    final_tensor = Dense(1)(net)
-    model = Model(inputs=net_input, outputs=final_tensor)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
-
-
-def strategy_rnn_resnet():
-    dense_output_size = 270
-    rnn_output_size = 32
-    rnn_input = Input(shape=(None, 9))
-    rnn_output = LSTM(rnn_output_size)(rnn_input)
-    aux_input = Input(shape=(87,))
-    concat = keras.layers.concatenate([rnn_output, aux_input])
-    net = Dense(dense_output_size)(concat)
-    if use_batch_norm:
-        net = BatchNormalization()(net)
-    net = Activation('relu')(net)
-    for _ in range(3):
-        net = resnet_block(net, dense_output_size, use_batch_norm)
-    final_tensor = Dense(1)(net)
-    model = Model(inputs=[rnn_input, aux_input], outputs=final_tensor)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
-
-
 def main():
     # create one ReplayMemory for each network kind
     pred_memory = ReplayMemory(prediction_replay_memory_size)
@@ -154,7 +60,7 @@ def main():
 
     # create one Network pair
     pred_network = PredictionNetwork(prediction_resnet(), pred_memory, prediction_net_batch_size, True)
-    strat_network = RnnStrategyNetwork(strategy_rnn_resnet(), strat_memory, strategy_net_batch_size, True)
+    strat_network = RnnStrategyNetwork(strategy_rnn_resnet(use_batch_norm), strat_memory, strategy_net_batch_size, True)
     networks = [pred_network, strat_network]
 
     # create 4 players, each with the same Networks
