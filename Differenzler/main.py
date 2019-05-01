@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 
+from keras.models import load_model
 from Memory import ReplayMemory, RnnReplayMemory, MultiReplayMemory
 from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork, MultiPredictionNetwork
 from Player import Player, RnnPlayer
@@ -26,12 +27,9 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 1
-rounds_until_save = 50000
-interval_to_print_stats = 1
-
-func_for_pred_y = normal_pred_y_func
-func_for_strat_y = normal_strat_y_func
+total_rounds = 5000000
+rounds_until_save = 100000
+interval_to_print_stats = 100000
 
 only_train_in_turn = False
 turn_size = 2
@@ -109,7 +107,13 @@ def main():
     players = sum(players, [])
 
     # create one PlayerInterlayer for each player
-    players = [RnnPlayerInterlayer(player, func_for_pred_y, func_for_strat_y) for player in players]
+    players = [
+        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[:4]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, aggressive_strat_y_func) for player in players[4:7]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, defensive_strat_y_func) for player in players[7:10]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[10:]],
+    ]
+    players = sum(players, [])
 
     # create one Sitting
     sitting = Sitting(debugging)
