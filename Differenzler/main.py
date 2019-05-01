@@ -8,7 +8,8 @@ from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork, Mult
 from Player import Player, RnnPlayer
 from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer, RnnMultiPlayerInterlayer
 from Sitting import Sitting
-from main_helper_methods import prediction_resnet, strategy_rnn_resnet, normal_pred_y_func, normal_strat_y_func
+from main_helper_methods import prediction_resnet, strategy_rnn_resnet, normal_pred_y_func, normal_strat_y_func, \
+    aggressive_strat_y_func, defensive_strat_y_func, small_prediction_net, small_strategy_net
 
 from numpy.random import seed
 seed(1)
@@ -51,7 +52,7 @@ if debugging and total_rounds > 10000:
 if only_train_in_turn and (turn_size < rounds_until_save and rounds_until_save % turn_size != 0 or
                            rounds_until_save < turn_size and turn_size % rounds_until_save != 0):
     print("WARNING: turn_size (" + str(turn_size) + ") and rounds_until_save (" + str(rounds_until_save) + ") aren't "
-                               "multiple of each other")
+          "multiple of each other")
 
 if total_rounds < rounds_until_save:
     rounds_until_save = total_rounds
@@ -69,21 +70,20 @@ def main():
     debug_strat_net = strategy_rnn_resnet(use_batch_norm)
 
     pred_networks = [
-        PredictionNetwork(debug_pred_net, pred_memories[0], prediction_net_batch_size, True),
-        PredictionNetwork(debug_pred_net, pred_memories[1], prediction_net_batch_size, True),
-        PredictionNetwork(debug_pred_net, pred_memories[2], prediction_net_batch_size, True),
-        PredictionNetwork(debug_pred_net, pred_memories[3], prediction_net_batch_size, False)
+        PredictionNetwork(load_model('saved_nets/prediction_500000.h5'), pred_memories[0], prediction_net_batch_size, True),
+        PredictionNetwork(load_model('saved_nets/prediction_500000.h5'), pred_memories[1], prediction_net_batch_size, True),
+        PredictionNetwork(load_model('saved_nets/prediction_500000.h5'), pred_memories[2], prediction_net_batch_size, True),
+        PredictionNetwork(small_prediction_net(), pred_memories[3], prediction_net_batch_size, False)
     ]
     strat_networks = [
-        RnnStrategyNetwork(debug_strat_net, strat_memories[0], strategy_net_batch_size, True),
-        RnnStrategyNetwork(debug_strat_net, strat_memories[1], strategy_net_batch_size, True),
-        RnnStrategyNetwork(debug_strat_net, strat_memories[2], strategy_net_batch_size, True),
-        RnnStrategyNetwork(debug_strat_net, strat_memories[3], strategy_net_batch_size, False)
+        RnnStrategyNetwork(load_model('saved_nets/strategy_500000.h5'), strat_memories[0], strategy_net_batch_size, True),
+        RnnStrategyNetwork(load_model('saved_nets/strategy_500000.h5'), strat_memories[1], strategy_net_batch_size, True),
+        RnnStrategyNetwork(load_model('saved_nets/strategy_500000.h5'), strat_memories[2], strategy_net_batch_size, True),
+        RnnStrategyNetwork(small_strategy_net(), strat_memories[3], strategy_net_batch_size, False)
     ]
 
     # make pairs of the networks
     networks = list(sum(zip(pred_networks, strat_networks), ()))
-
 
     # give each network a name
     pred_network_names = [
@@ -110,7 +110,7 @@ def main():
          for _ in range(3)],
         [RnnPlayer(pred_networks[2], strat_networks[2], prediction_exploration_rate, strategy_exploration_rate)
          for _ in range(3)],
-        [RnnPlayer(pred_networks[3], strat_networks[3], prediction_exploration_rate, strategy_exploration_rate)
+        [RnnPlayer(pred_networks[3], strat_networks[3], 0.99999, 0.99999)
          for _ in range(2)]
     ]
 
@@ -123,29 +123,27 @@ def main():
     # create one Sitting
     sitting = Sitting(debugging)
     last_stop = datetime.datetime.now()
+    r = random.Random()
     with open('stats.txt', 'w') as f:
         f.write("// interval to print stats: " + str(interval_to_print_stats) + "\n")
         total_diff = 0
         total_losses = [0.0 for _ in range(len(networks))]
         for i in range(total_rounds):
-            # TODO: sample the players
-            sitting.set_players(players[:4])
+            sitting.set_players(r.sample(players, 4))
             total_diff += sitting.play_full_round()
-            # TODO: remove this loop
-            for _ in range(1):  # just so that we actually learn a few times
-                if only_train_in_turn:
-                    index_to_train = i // turn_size % len(networks)
-                    total_losses[index_to_train] += networks[index_to_train].train()
-                else:
-                    for net_i, network in enumerate(networks):
-                        total_losses[net_i] += network.train()
+            if only_train_in_turn:
+                index_to_train = i // turn_size % len(networks)
+                total_losses[index_to_train] += networks[index_to_train].train()
+            else:
+                for net_i, network in enumerate(networks):
+                    total_losses[net_i] += network.train()
             if (i + 1) % interval_to_print_stats == 0:
                 print(str(i + 1), "rounds have been played")
                 avg = total_diff / 4 / interval_to_print_stats
                 print("Average difference of one player:\t", avg)
                 losses_string = ', '.join([str(l) for l in np.array(total_losses) / interval_to_print_stats])
                 print("The losses are:\t", losses_string)
-                # print("It took:", datetime.datetime.now() - last_stop)
+                print("It took:", datetime.datetime.now() - last_stop)
                 last_stop = datetime.datetime.now()
                 print('')
                 f.write(str(i + 1) + "\n")
