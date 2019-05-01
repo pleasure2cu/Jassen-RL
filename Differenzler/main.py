@@ -27,7 +27,7 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 200000
+total_rounds = 150000
 rounds_until_save = 50000
 interval_to_print_stats = 10000
 
