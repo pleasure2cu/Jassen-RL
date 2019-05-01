@@ -11,12 +11,6 @@ from Sitting import Sitting
 from main_helper_methods import prediction_resnet, strategy_rnn_resnet, normal_pred_y_func, normal_strat_y_func, \
     aggressive_strat_y_func, defensive_strat_y_func, small_prediction_net, small_strategy_net
 
-from numpy.random import seed
-seed(1)
-from tensorflow import set_random_seed
-set_random_seed(2)
-random.seed(42)
-
 prediction_save_path = './saved_nets/prediction/'
 strategy_save_path = './saved_nets/strategy/'
 
@@ -65,10 +59,7 @@ def main():
     strat_memories = [RnnReplayMemory(strategy_replay_memory_size) for _ in range(3)]
     strat_memories.append(RnnReplayMemory(1))
 
-    # create Network pairs
-    debug_pred_net = prediction_resnet()
-    debug_strat_net = strategy_rnn_resnet(use_batch_norm)
-
+    # create Networks
     pred_networks = [
         PredictionNetwork(load_model('saved_nets/prediction_500000.h5'), pred_memories[0], prediction_net_batch_size, True),
         PredictionNetwork(load_model('saved_nets/prediction_500000.h5'), pred_memories[1], prediction_net_batch_size, True),

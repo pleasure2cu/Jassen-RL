@@ -18,7 +18,6 @@ class ReplayMemory:
 
     def draw_samples(self, n: int):
         assert n >= 0
-        random.seed(42)
         n = min(n, len(self._items))
         return random.sample(self._items, n)
 
@@ -43,13 +42,9 @@ class RnnReplayMemory(ReplayMemory):
 
     def draw_samples(self, n: int) -> List[RnnSample]:
         assert n >= 0
-        random.seed(42)
-        np.random.seed(1)
         time_series_class = np.random.randint(9)
         n = min(n, len(self._items[time_series_class]))
-        asdf = self._items[time_series_class][:n]
-        return asdf
-        # return random.sample(self._items[time_series_class], n)
+        return random.sample(self._items[time_series_class], n)
 
     def add_samples(self, samples: List[RnnSample]):
         for sample in samples:

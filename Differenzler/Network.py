@@ -38,8 +38,6 @@ class Network:
         for i in range(n):
             x[i] = samples[i][0]
             y[i] = samples[i][1]
-        print(x)
-        print(y)
         return self._neural_network.train_on_batch(x, y)
 
     def save_network(self, file_path: str):
@@ -77,7 +75,7 @@ class MultiPredictionNetwork(PredictionNetwork):
         # only change the activation from which we know the 'right answer', given by the sample
         skew = 158 // y_batch[0].size
         for i in range(n):
-            y_batch[i][samples[i].guessed_points//skew] = samples[i].reward
+            y_batch[i][samples[i].guessed_points // skew] = samples[i].reward
         return self._neural_network.train_on_batch(x_batch, y_batch)
 
 
@@ -102,9 +100,6 @@ class RnnStrategyNetwork(StrategyNetwork):
         if n == 0:
             return -1
         x_rnn, x_aux, y = turn_rnn_samples_into_batch(samples)
-        print(x_rnn)
-        print(x_aux)
-        print(y)
         return self._neural_network.train_on_batch([x_rnn, x_aux], y)
 
     def evaluate(self, network_input: List[np.ndarray]) -> np.ndarray:

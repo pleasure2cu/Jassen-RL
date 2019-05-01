@@ -1,4 +1,4 @@
-from typing import List, Tuple, Callable
+from typing import List, Tuple
 
 import numpy as np
 
@@ -25,7 +25,6 @@ class Sitting:
 
     def play_full_round(self) -> int:
         assert self._players is not None
-        np.random.seed(1)
         # distribute the cards to the players
         distribution = np.random.permutation(np.arange(36))
         for i in range(4):
@@ -81,7 +80,6 @@ class Sitting:
 
         # compute rewards and give them
         absolute_diff = np.absolute(predictions - points_made)
-        # round_winner_index = np.argmin(absolute_diff)
         for i, player in enumerate(self._players):
             pred_y = player.pred_y_func(points_made[i])
             strat_y = player.strat_y_func(predictions[i], points_made[i])
