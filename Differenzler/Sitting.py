@@ -6,15 +6,25 @@ from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer
 from helper_functions import get_winning_card_index, get_points_from_table
 
 
+PlayerInterlayerType = RnnPlayerInterlayer
+
+
 class Sitting:
-    _players: List[RnnPlayerInterlayer]
+    _players: List[PlayerInterlayerType]
     _debugging: bool
 
-    def __init__(self, players: List[RnnPlayerInterlayer], debugging: bool):
-        self._players = players
+    def __init__(self, debugging: bool):
+        self._players = None
         self._debugging = debugging
 
+    def set_players(self, players: List[PlayerInterlayerType]):
+        assert len(players) == 4, players
+        for i, player in enumerate(players):
+            player.set_absolute_position(i)
+        self._players = players
+
     def play_full_round(self) -> int:
+        assert self._players is not None
         np.random.seed(1)
         # distribute the cards to the players
         distribution = np.random.permutation(np.arange(36))

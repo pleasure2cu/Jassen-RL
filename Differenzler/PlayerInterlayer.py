@@ -20,18 +20,22 @@ class PlayerInterlayer:
                  pred_y_func: Callable, strat_y_func: Callable):
         self._player = player
         self._strategy_log = np.empty((9, size_of_one_strat_net_input))
-        tmp = np.zeros(4)
-        tmp[absolute_position_at_table] = 1
-        self._absolute_position_at_table = tmp
+        self.set_absolute_position(absolute_position_at_table)
         self.pred_y_func = pred_y_func
         self.strat_y_func = strat_y_func
+
+    def set_absolute_position(self, position: int):
+        assert 0 <= position < 4, position
+        tmp = np.zeros(4)
+        tmp[position] = 1
+        self._absolute_position_at_table = tmp
 
     def receive_hand(self, hand: np.array):
         self._round_index = 0
         self._player.receive_hand(hand)
 
-    def make_prediction(self, position_at_table: int) -> int:
-        prediction, state_vector = self._player.make_prediction(position_at_table)
+    def make_prediction(self, relative_position_at_table: int) -> int:
+        prediction, state_vector = self._player.make_prediction(relative_position_at_table)
         assert state_vector.size == 37
         self._prediction_log = state_vector
         assert np.sum(self._prediction_log[:36]) == 9
@@ -162,8 +166,8 @@ class RnnPlayerInterlayer(PlayerInterlayer):
 class RnnMultiPlayerInterlayer(RnnPlayerInterlayer):
     _prediction_log_prediction: int
 
-    def make_prediction(self, position_at_table: int) -> int:
-        prediction = super(RnnMultiPlayerInterlayer, self).make_prediction(position_at_table)
+    def make_prediction(self, relative_position_at_table: int) -> int:
+        prediction = super(RnnMultiPlayerInterlayer, self).make_prediction(relative_position_at_table)
         self._prediction_log_prediction = prediction
         return prediction
     

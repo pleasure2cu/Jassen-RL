@@ -75,7 +75,7 @@ def main():
     players = [RnnPlayerInterlayer(players[i], i, func_for_pred_y, func_for_strat_y) for i in range(4)]
 
     # create one Sitting
-    sitting = Sitting(players, debugging)
+    sitting = Sitting(debugging)
     last_stop = datetime.datetime.now()
     with open('stats.txt', 'w') as f:
         f.write("// interval to print stats: " + str(interval_to_print_stats) + "\n")
@@ -83,6 +83,7 @@ def main():
         total_losses = [0.0 for _ in range(len(networks))]
         for i in range(total_rounds // rounds_until_save):
             for j in range(rounds_until_save):
+                sitting.set_players(players)
                 total_diff += sitting.play_full_round()
                 for _ in range(1):  # just so that we actually learn a few times
                     if only_train_in_turn:
