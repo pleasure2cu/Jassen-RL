@@ -56,6 +56,14 @@ if total_rounds < rounds_until_save:
     rounds_until_save = total_rounds
 
 
+def normal_pred_y_func(made_points: int):
+    return made_points
+
+
+def normal_strat_y_func(predicted_points: int, made_points: int):
+    return -1 * np.absolute(predicted_points - made_points)
+
+
 def prediction_vanilla_ffn():
     net = keras.Sequential([
         keras.layers.Dense(30, activation='relu', input_shape=(37,)),
@@ -154,7 +162,7 @@ def main():
                for _ in range(4)]
 
     # create one PlayerInterlayer for each player
-    players = [RnnPlayerInterlayer(players[i], i) for i in range(4)]
+    players = [RnnPlayerInterlayer(players[i], i, normal_pred_y_func, normal_strat_y_func) for i in range(4)]
 
     # create one Sitting
     sitting = Sitting(players, debugging)

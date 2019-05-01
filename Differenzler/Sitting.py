@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Callable
 
 import numpy as np
 
@@ -72,22 +72,15 @@ class Sitting:
         # compute rewards and give them
         absolute_diff = np.absolute(predictions - points_made)
         # round_winner_index = np.argmin(absolute_diff)
-        for i in range(len(self._players)):
-            # rewards for the strategy are chosen s.t. the expected value is 0
-            # if i == round_winner_index:
-            #    self._players[i].end_round(75, 75)
-            # else:
-            #    self._players[i].end_round(-25, -25)
-            strat_y = -1 * absolute_diff[i]
-            # if points_made[i] + 5 < predictions[i]:  # punish defensive players
-            #     strat_y -= 8
-            # elif points_made[i] < predictions[i]:  # punish defensive players
-            #     strat_y -= 2
-            self._players[i].end_round(points_made[i], strat_y)
+        for i, player in enumerate(self._players):
+            pred_y = player.pred_y_func(points_made[i])
+            strat_y = player.strat_y_func(predictions[i], points_made[i])
+            self._players[i].end_round(pred_y, strat_y)
 
         if self._debugging:
             # a whole heap of assertions
-            added_samples = [sub_list[-4:] for sub_list in self._players[0]._player.strategy_network._replay_memory._items]
+            added_samples = [sub_list[-4:] for sub_list in
+                             self._players[0]._player.strategy_network._replay_memory._items]
 
             # check that time series doesn't change from blie to blie or inside blie
             for i in range(8):

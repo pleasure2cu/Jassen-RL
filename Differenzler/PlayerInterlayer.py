@@ -1,4 +1,4 @@
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Callable
 
 import numpy as np
 
@@ -13,13 +13,18 @@ class PlayerInterlayer:
     _strategy_log: np.ndarray
     _round_index: int
     _absolute_position_at_table: np.array  # 4 entries vector
+    pred_y_func: Callable
+    strat_y_func: Callable
 
-    def __init__(self, player: Player, size_of_one_strat_net_input: int, absolute_position_at_table: int):
+    def __init__(self, player: Player, size_of_one_strat_net_input: int, absolute_position_at_table: int,
+                 pred_y_func: Callable, strat_y_func: Callable):
         self._player = player
         self._strategy_log = np.empty((9, size_of_one_strat_net_input))
         tmp = np.zeros(4)
         tmp[absolute_position_at_table] = 1
         self._absolute_position_at_table = tmp
+        self.pred_y_func = pred_y_func
+        self.strat_y_func = strat_y_func
 
     def receive_hand(self, hand: np.array):
         self._round_index = 0
@@ -101,8 +106,8 @@ class RnnPlayerInterlayer(PlayerInterlayer):
     _player: RnnPlayer
     _strategy_log: List[RnnNetInput]
 
-    def __init__(self, player: Player, absolute_position_at_table: int):
-        super().__init__(player, 1, absolute_position_at_table)
+    def __init__(self, player: Player, absolute_position_at_table: int, pred_y_func: Callable, strat_y_func: Callable):
+        super().__init__(player, 1, absolute_position_at_table, pred_y_func, strat_y_func)
         self._strategy_log = []
 
     def play_card(self, table_cards: np.ndarray, index_of_first_card: int, gone_cards: np.array, diff: int,
