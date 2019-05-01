@@ -10,8 +10,28 @@ def normal_pred_y_func(made_points: int):
     return made_points
 
 
-def normal_strat_y_func(predicted_points: int, made_points: int):
+def normal_strat_y_func(predicted_points: int, made_points: int) -> int:
+    assert predicted_points is not None and 0 <= predicted_points <= 257
+    assert made_points is not None and 0 <= made_points <= 257
     return -1 * np.absolute(predicted_points - made_points)
+
+
+def aggressive_strat_y_func(predicted_points: int, made_points: int) -> int:
+    output = normal_strat_y_func(predicted_points, made_points)
+    if made_points + 5 < predicted_points:
+        output -= 8
+    elif made_points < predicted_points:
+        output -= 2
+    return output
+
+
+def defensive_strat_y_func(predicted_points: int, made_points: int) -> int:
+    output = normal_strat_y_func(predicted_points, made_points)
+    if made_points - 5 > predicted_points:
+        output -= 8
+    elif made_points > predicted_points:
+        output -= 2
+    return output
 
 
 def prediction_vanilla_ffn():
