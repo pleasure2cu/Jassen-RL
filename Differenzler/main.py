@@ -16,8 +16,8 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 random.seed(42)
 
-prediction_save_path = './saved_nets/prediction/prediction'
-strategy_save_path = './saved_nets/strategy/strategy'
+prediction_save_path = './saved_nets/prediction/'
+strategy_save_path = './saved_nets/strategy/'
 
 # Parameters
 prediction_replay_memory_size = 100000
@@ -58,21 +58,67 @@ if total_rounds < rounds_until_save:
 
 
 def main():
-    # create one ReplayMemory for each network kind
-    pred_memory = ReplayMemory(prediction_replay_memory_size)
-    strat_memory = RnnReplayMemory(strategy_replay_memory_size)
+    # create replay memories
+    pred_memories = [ReplayMemory(prediction_replay_memory_size) for _ in range(3)]
+    pred_memories.append(ReplayMemory(1))
+    strat_memories = [RnnReplayMemory(strategy_replay_memory_size) for _ in range(3)]
+    strat_memories.append(RnnReplayMemory(1))
 
-    # create one Network pair
-    pred_network = PredictionNetwork(prediction_resnet(), pred_memory, prediction_net_batch_size, True)
-    strat_network = RnnStrategyNetwork(strategy_rnn_resnet(use_batch_norm), strat_memory, strategy_net_batch_size, True)
-    networks = [pred_network, strat_network]
+    # create Network pairs
+    debug_pred_net = prediction_resnet()
+    debug_strat_net = strategy_rnn_resnet(use_batch_norm)
 
-    # create 4 players, each with the same Networks
-    players = [RnnPlayer(pred_network, strat_network, prediction_exploration_rate, strategy_exploration_rate)
-               for _ in range(4)]
+    pred_networks = [
+        PredictionNetwork(debug_pred_net, pred_memories[0], prediction_net_batch_size, True),
+        PredictionNetwork(debug_pred_net, pred_memories[1], prediction_net_batch_size, True),
+        PredictionNetwork(debug_pred_net, pred_memories[2], prediction_net_batch_size, True),
+        PredictionNetwork(debug_pred_net, pred_memories[3], prediction_net_batch_size, False)
+    ]
+    strat_networks = [
+        RnnStrategyNetwork(debug_strat_net, strat_memories[0], strategy_net_batch_size, True),
+        RnnStrategyNetwork(debug_strat_net, strat_memories[1], strategy_net_batch_size, True),
+        RnnStrategyNetwork(debug_strat_net, strat_memories[2], strategy_net_batch_size, True),
+        RnnStrategyNetwork(debug_strat_net, strat_memories[3], strategy_net_batch_size, False)
+    ]
+
+    # make pairs of the networks
+    networks = list(sum(zip(pred_networks, strat_networks), ()))
+
+
+    # give each network a name
+    pred_network_names = [
+        'normal_prediction',
+        'aggressive_prediction',
+        'defensive_prediction',
+        'random_prediction',
+    ]
+    strat_network_names = [
+        'normal_strategy',
+        'aggressive_strategy',
+        'defensive_strategy',
+        'random_strategy'
+    ]
+
+    # make the same pairs as above
+    network_names = list(sum(zip(pred_network_names, strat_network_names), ()))
+
+    # create players
+    players = [
+        [RnnPlayer(pred_networks[0], strat_networks[0], prediction_exploration_rate, strategy_exploration_rate)
+         for _ in range(4)],
+        [RnnPlayer(pred_networks[1], strat_networks[1], prediction_exploration_rate, strategy_exploration_rate)
+         for _ in range(3)],
+        [RnnPlayer(pred_networks[2], strat_networks[2], prediction_exploration_rate, strategy_exploration_rate)
+         for _ in range(3)],
+        [RnnPlayer(pred_networks[3], strat_networks[3], prediction_exploration_rate, strategy_exploration_rate)
+         for _ in range(2)]
+    ]
+
+    # flatten players
+    players = sum(players, [])
 
     # create one PlayerInterlayer for each player
-    players = [RnnPlayerInterlayer(players[i], i, func_for_pred_y, func_for_strat_y) for i in range(4)]
+    players = [RnnPlayerInterlayer(player, func_for_pred_y, func_for_strat_y) for player in players]
 
     # create one Sitting
     sitting = Sitting(debugging)
@@ -82,8 +128,10 @@ def main():
         total_diff = 0
         total_losses = [0.0 for _ in range(len(networks))]
         for i in range(total_rounds):
-            sitting.set_players(players)
+            # TODO: sample the players
+            sitting.set_players(players[:4])
             total_diff += sitting.play_full_round()
+            # TODO: remove this loop
             for _ in range(1):  # just so that we actually learn a few times
                 if only_train_in_turn:
                     index_to_train = i // turn_size % len(networks)
@@ -106,8 +154,17 @@ def main():
                 total_diff = 0
                 total_losses = [0.0 for _ in range(len(networks))]
             if (i + 1) % rounds_until_save == 0:
-                pred_network.save_network(prediction_save_path + '_' + str(i + 1) + '.h5')
-                strat_network.save_network(strategy_save_path + '_' + str(i + 1) + '.h5')
+                for keras_net, net_name in zip(networks, network_names):
+                    if 'random' in net_name:
+                        continue
+                    elif 'pred' in net_name:
+                        full_name = prediction_save_path
+                    elif 'strat' in net_name:
+                        full_name = strategy_save_path
+                    else:
+                        assert 0, net_name
+                    full_name += net_name + '_' + str(i + 1) + '.h5'
+                    keras_net.save_network(full_name)
 
 
 if __name__ == "__main__":

@@ -16,11 +16,10 @@ class PlayerInterlayer:
     pred_y_func: Callable
     strat_y_func: Callable
 
-    def __init__(self, player: Player, size_of_one_strat_net_input: int, absolute_position_at_table: int,
-                 pred_y_func: Callable, strat_y_func: Callable):
+    def __init__(self, player: Player, size_of_one_strat_net_input: int, pred_y_func: Callable, strat_y_func: Callable):
         self._player = player
         self._strategy_log = np.empty((9, size_of_one_strat_net_input))
-        self.set_absolute_position(absolute_position_at_table)
+        self._absolute_position_at_table = None
         self.pred_y_func = pred_y_func
         self.strat_y_func = strat_y_func
 
@@ -110,8 +109,8 @@ class RnnPlayerInterlayer(PlayerInterlayer):
     _player: RnnPlayer
     _strategy_log: List[RnnNetInput]
 
-    def __init__(self, player: Player, absolute_position_at_table: int, pred_y_func: Callable, strat_y_func: Callable):
-        super().__init__(player, 1, absolute_position_at_table, pred_y_func, strat_y_func)
+    def __init__(self, player: Player, pred_y_func: Callable, strat_y_func: Callable):
+        super().__init__(player, 1, pred_y_func, strat_y_func)
         self._strategy_log = []
 
     def play_card(self, table_cards: np.ndarray, index_of_first_card: int, gone_cards: np.array, diff: int,
@@ -126,6 +125,7 @@ class RnnPlayerInterlayer(PlayerInterlayer):
                     of the player that started that blie
         :return: card we want to play in the two-numbers-representation
         """
+        assert self._absolute_position_at_table is not None
         # put together the rnn input
         rnn_input_vector = np.zeros((len(blie_history) + 1) * 9)
         for i in range(len(blie_history)):
