@@ -35,11 +35,15 @@ total_rounds = 1
 rounds_until_save = 50000
 interval_to_print_stats = 1
 
+func_for_pred_y = normal_pred_y_func
+func_for_strat_y = normal_strat_y_func
+
 only_train_in_turn = False
 turn_size = 2
 
 use_batch_norm = True
 debugging = False
+
 
 if debugging and total_rounds > 10000:
     print("WARNING: you are still debugging")
@@ -68,7 +72,7 @@ def main():
                for _ in range(4)]
 
     # create one PlayerInterlayer for each player
-    players = [RnnPlayerInterlayer(players[i], i, normal_pred_y_func, normal_strat_y_func) for i in range(4)]
+    players = [RnnPlayerInterlayer(players[i], i, func_for_pred_y, func_for_strat_y) for i in range(4)]
 
     # create one Sitting
     sitting = Sitting(players, debugging)
