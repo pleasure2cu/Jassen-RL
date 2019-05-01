@@ -71,7 +71,7 @@ def turn_rnn_samples_into_batch(samples: List[RnnSample]) -> Tuple[np.ndarray, n
 
     n = len(samples)
     rnn_input_batch = np.zeros((n,) + samples[0].rnn_input.shape)
-    aux_input_batch = np.zeros((n,) + samples[1].aux_input.shape)
+    aux_input_batch = np.zeros((n,) + samples[0].aux_input.shape)
     y_batch = np.zeros(n)
     for i in range(n):
         sample = samples[i]
