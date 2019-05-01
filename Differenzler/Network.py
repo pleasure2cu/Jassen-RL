@@ -100,6 +100,9 @@ class RnnStrategyNetwork(StrategyNetwork):
         if n == 0:
             return -1
         x_rnn, x_aux, y = turn_rnn_samples_into_batch(samples)
+        print(x_rnn)
+        print(x_aux)
+        print(y)
         return self._neural_network.train_on_batch([x_rnn, x_aux], y)
 
     def evaluate(self, network_input: List[np.ndarray]) -> np.ndarray:

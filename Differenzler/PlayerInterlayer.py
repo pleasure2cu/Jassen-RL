@@ -141,6 +141,7 @@ class RnnPlayerInterlayer(PlayerInterlayer):
         net_input, action = self._player.play_card(state, int(table_cards[index_of_first_card][1]))
         self._strategy_log.append(net_input)
         self._round_index += 1
+        print(action)
         return action
 
     def end_round(self, prediction_reward: Union[int, float], strategy_reward: Union[int, float]):

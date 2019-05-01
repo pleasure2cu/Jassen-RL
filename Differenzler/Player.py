@@ -36,6 +36,7 @@ class Player:
         """
         :return: The points the network thinks this hand will yield
         """
+        np.random.seed(1)
         assert position_at_table in [0, 1, 2, 3], "is " + str(position_at_table)
         state = np.concatenate([
             self.hand,
@@ -82,6 +83,7 @@ class RnnPlayer(Player):
                 1. the state-action pair to add to the log
                 2. the action chosen
         """
+        np.random.seed(1)
         assert suit in range(-1, 4), suit
         possible_actions = get_all_possible_actions(self.hand, suit)
         n = len(possible_actions)
@@ -90,8 +92,10 @@ class RnnPlayer(Player):
         aux_part = np.concatenate([aux_part_left_block, possible_actions], axis=1)
         if np.random.binomial(1, self._strategy_exp):
             action_index = np.random.randint(n)
+            print("random")
         else:
             q_values = self.strategy_network.evaluate([rnn_part, aux_part])
+            print(q_values)
             action_index = np.argmax(q_values)
         action = possible_actions[action_index]
         self.hand[action[0] + 9 * action[1]] = 0

@@ -15,6 +15,7 @@ class Sitting:
         self._debugging = debugging
 
     def play_full_round(self) -> int:
+        np.random.seed(1)
         # distribute the cards to the players
         distribution = np.random.permutation(np.arange(36))
         for i in range(4):

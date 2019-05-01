@@ -1,4 +1,5 @@
 import datetime
+import random
 
 import keras
 import numpy as np
@@ -11,6 +12,12 @@ from Player import Player, RnnPlayer
 from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer, RnnMultiPlayerInterlayer
 from Sitting import Sitting
 from helper_functions import resnet_block
+
+from numpy.random import seed
+seed(1)
+from tensorflow import set_random_seed
+set_random_seed(2)
+random.seed(42)
 
 prediction_save_path = './saved_nets/prediction/prediction'
 strategy_save_path = './saved_nets/strategy/strategy'
@@ -27,9 +34,9 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 150000
+total_rounds = 1
 rounds_until_save = 50000
-interval_to_print_stats = 10000
+interval_to_print_stats = 1
 
 only_train_in_turn = False
 turn_size = 2
@@ -172,7 +179,7 @@ def main():
                     print("Average difference of one player:\t", avg)
                     losses_string = ', '.join([str(l) for l in np.array(total_losses) / interval_to_print_stats])
                     print("The losses are:\t", losses_string)
-                    print("It took:", datetime.datetime.now() - last_stop)
+                    # print("It took:", datetime.datetime.now() - last_stop)
                     last_stop = datetime.datetime.now()
                     print('')
                     f.write(str(i * rounds_until_save + j + 1) + "\n")
