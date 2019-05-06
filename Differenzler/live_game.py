@@ -81,7 +81,8 @@ player = RnnPlayer(pred_network, strat_network, 0, 0)
 
 absolute_position = int(input("What is the index of the player? "))
 assert 0 <= absolute_position < 4, "the given absolute position is " + str(absolute_position)
-player_inter = RnnPlayerInterlayer(player, absolute_position)
+player_inter = RnnPlayerInterlayer(player, sum, sum)
+player_inter.set_absolute_position(absolute_position)
 
 # get the trump suit
 trump_string = None
