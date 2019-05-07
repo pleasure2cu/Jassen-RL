@@ -34,6 +34,18 @@ def defensive_strat_y_func(predicted_points: int, made_points: int) -> int:
     return output
 
 
+def very_aggressive_strat_y_func(predicted_points: int, made_points: int) -> int:
+    output = normal_strat_y_func(predicted_points, made_points)
+    output += made_points
+    return output
+
+
+def very_defensive_strat_y_func(predicted_points: int, made_points: int) -> int:
+    output = normal_strat_y_func(predicted_points, made_points)
+    output -= made_points
+    return output
+
+
 def prediction_vanilla_ffn():
     net = keras.Sequential([
         keras.layers.Dense(30, activation='relu', input_shape=(37,)),
