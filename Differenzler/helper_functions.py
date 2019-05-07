@@ -14,8 +14,8 @@ color_points = {0: 11, 1: 4, 2: 3, 3: 2, 4: 10, 5: 0, 6: 0, 7: 0, 8: 0}
 
 def translate_vector_to_two_number_representation(hand: np.array) -> np.ndarray:
     card_indices = np.nonzero(hand)[0]
-    wanted_representation = map(lambda x: [x % 9, x // 9], card_indices)
-    return np.array(list(wanted_representation))
+    wanted_representation = [[x % 9, x // 9] for x in card_indices]
+    return np.array(wanted_representation)
 
 
 def get_all_possible_actions(hand: np.array, first_played_suit: int) -> np.ndarray:
@@ -27,18 +27,18 @@ def get_all_possible_actions(hand: np.array, first_played_suit: int) -> np.ndarr
     :return: all possible actions in two number representation as np.ndarray (first axis are the different options)
     """
     assert first_played_suit in range(-1, 4), "the values is " + str(first_played_suit)
-    if first_played_suit < 0 or not np.sum(hand[first_played_suit * 9: (first_played_suit + 1) * 9]):
-        playable_cards = hand
-    elif first_played_suit == 0:  # trump is played
-        if np.sum(hand[first_played_suit: first_played_suit + 9]) == 1 and hand[0]:  # we only have the buur
-            playable_cards = hand
-        else:
+    if first_played_suit == 0:
+        if np.any(hand[1: 9]):
             playable_cards = hand[:9]
-    else:  # trump isn't played and we have the played suit
+        else:
+            playable_cards = hand
+    elif np.any(hand[first_played_suit * 9: (first_played_suit + 1) * 9]):
         playable_cards = np.zeros(36)
         playable_cards[:9] = hand[:9]
         playable_cards[first_played_suit * 9: (first_played_suit + 1) * 9] = \
             hand[first_played_suit * 9: (first_played_suit + 1) * 9]
+    else:
+        playable_cards = hand
     return translate_vector_to_two_number_representation(playable_cards)
 
 
