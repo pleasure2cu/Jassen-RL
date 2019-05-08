@@ -10,7 +10,8 @@ from Player import Player, RnnPlayer
 from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer, RnnMultiPlayerInterlayer
 from Sitting import Sitting
 from main_helper_methods import prediction_resnet, strategy_rnn_resnet, normal_pred_y_func, normal_strat_y_func, \
-    aggressive_strat_y_func, defensive_strat_y_func, small_prediction_net, small_strategy_net
+    aggressive_strat_y_func, defensive_strat_y_func, small_prediction_net, small_strategy_net, \
+    very_aggressive_strat_y_func, very_defensive_strat_y_func
 
 prediction_save_path = './saved_nets/prediction/'
 strategy_save_path = './saved_nets/strategy/'
@@ -27,10 +28,10 @@ strategy_exploration_rate = 0.07
 
 size_of_one_strat_net_input = 83
 
-total_rounds = 5000000
+total_rounds = 8000000
 rounds_until_save = 100000
-interval_to_print_stats = 100000
-round_when_adding_players = 10
+interval_to_print_stats = 50000
+round_when_adding_players = 1200000
 
 only_train_in_turn = False
 turn_size = 2
@@ -109,10 +110,10 @@ def main():
 
     # create one PlayerInterlayer for each player
     players = [
-        [RnnPlayerInterlayer(player, normal_pred_y_func, very_aggressive_strat_y_func) for player in players[:1]],
-        [RnnPlayerInterlayer(player, normal_pred_y_func, aggressive_strat_y_func) for player in players[1:3]],
-        [RnnPlayerInterlayer(player, normal_pred_y_func, very_defensive_strat_y_func) for player in players[3:4]],
-        [RnnPlayerInterlayer(player, normal_pred_y_func, defensive_strat_y_func) for player in players[4:6]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, very_aggressive_strat_y_func) for player in players[: 1]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, aggressive_strat_y_func) for player in players[1: 3]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, very_defensive_strat_y_func) for player in players[3: 4]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, defensive_strat_y_func) for player in players[4: 6]],
         [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[6:]]
     ]
     players = sum(players, [])
@@ -169,14 +170,15 @@ def main():
                        for _ in range(2)]
                 inps = [RnnPlayerInterlayer(nps[i], normal_pred_y_func, normal_strat_y_func) for i in range(2)]
                 players += inps
-                # add an 'old' version of the normal player
+
+                # add 2 static versions of the current normal player
                 pred_mem = ReplayMemory(1)
                 strat_mem = RnnReplayMemory(1)
                 pred_net = load_model(prediction_save_path + 'normal_prediction_' + str(i + 1) + '.h5')
                 strat_net = load_model(strategy_save_path + 'normal_strategy_' + str(i + 1) + '.h5')
                 p_net = PredictionNetwork(pred_net, pred_mem, 1, False)
                 s_net = RnnStrategyNetwork(strat_net, strat_mem, 1, False)
-                ps = [RnnPlayer(p_net, s_net, prediction_exploration_rate, strategy_exploration_rate) for _ in range(2)]
+                ps = [RnnPlayer(p_net, s_net, 0.02, 0.02) for _ in range(2)]
                 ips = [RnnPlayerInterlayer(ps[i], normal_pred_y_func, normal_strat_y_func) for i in range(2)]
                 players += ips
 
