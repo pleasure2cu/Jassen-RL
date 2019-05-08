@@ -11,7 +11,6 @@ def normal_pred_y_func(made_points: int):
 
 
 def normal_strat_y_func(predicted_points: int, made_points: int) -> int:
-    assert predicted_points is not None and 0 <= predicted_points <= 257
     assert made_points is not None and 0 <= made_points <= 257
     return -1 * np.absolute(predicted_points - made_points)
 
