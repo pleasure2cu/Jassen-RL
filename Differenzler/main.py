@@ -128,7 +128,6 @@ def main():
         total_losses = [0.0 for _ in range(len(networks))]
         for i in range(0, total_rounds, 10):
             sitting.set_players(r.sample(players, 4))
-            print(list([players.index(p) for p in sitting._players]))
             for _ in range(10):
                 total_diff += sitting.play_full_round()
             i += 9
