@@ -32,6 +32,7 @@ total_rounds = 8000000
 rounds_until_save = 100000
 interval_to_print_stats = 50000
 round_when_adding_players = 1200000
+start_offset = 1000
 
 only_train_in_turn = False
 turn_size = 2
@@ -58,16 +59,27 @@ if round_when_adding_players % rounds_until_save != 0:
 def main():
     # create replay memories
     pred_memories = [ReplayMemory(prediction_replay_memory_size) for _ in range(5)]
+    pred_memories.append(ReplayMemory(1))
     strat_memories = [RnnReplayMemory(strategy_replay_memory_size) for _ in range(5)]
+    strat_memories.append(RnnReplayMemory(1))
 
     # create Networks
     pred_networks = [
-        PredictionNetwork(prediction_resnet(), pred_memories[i], prediction_net_batch_size, True) for i in range(5)
+        PredictionNetwork(load_model(''), pred_memories[0], prediction_net_batch_size, True),
+        PredictionNetwork(load_model(''), pred_memories[1], prediction_net_batch_size, True),
+        PredictionNetwork(load_model(''), pred_memories[2], prediction_net_batch_size, True),
+        PredictionNetwork(load_model(''), pred_memories[3], prediction_net_batch_size, True),
+        PredictionNetwork(load_model(''), pred_memories[4], prediction_net_batch_size, True),
+        PredictionNetwork(load_model(''), pred_memories[5], prediction_net_batch_size, False)
     ]
     print(prediction_resnet().summary())
     strat_networks = [
-        RnnStrategyNetwork(strategy_rnn_resnet(use_batch_norm), strat_memories[i], strategy_net_batch_size, True)
-        for i in range(5)
+        RnnStrategyNetwork(load_model(''), strat_memories[0], strategy_net_batch_size, True),
+        RnnStrategyNetwork(load_model(''), strat_memories[1], strategy_net_batch_size, True),
+        RnnStrategyNetwork(load_model(''), strat_memories[2], strategy_net_batch_size, True),
+        RnnStrategyNetwork(load_model(''), strat_memories[3], strategy_net_batch_size, True),
+        RnnStrategyNetwork(load_model(''), strat_memories[4], strategy_net_batch_size, True),
+        RnnStrategyNetwork(load_model(''), strat_memories[5], strategy_net_batch_size, False)
     ]
     print(strategy_rnn_resnet(use_batch_norm).summary())
 
@@ -81,13 +93,15 @@ def main():
         'very_defensive_prediction',
         'defensive_prediction',
         'normal_prediction',
+        'frozen_normal_prediction'
     ]
     strat_network_names = [
         'very_aggressive_strategy',
         'aggressive_strategy',
         'very_defensive_strategy',
         'defensive_strategy',
-        'normal_strategy'
+        'normal_strategy',
+        'frozen_normal_strategy'
     ]
 
     # make the same pairs as above
@@ -102,7 +116,9 @@ def main():
         [RnnPlayer(pred_networks[3], strat_networks[3], prediction_exploration_rate, strategy_exploration_rate)
          for _ in range(2)],
         [RnnPlayer(pred_networks[4], strat_networks[4], prediction_exploration_rate, strategy_exploration_rate)
-         for _ in range(4)],
+         for _ in range(6)],
+        [RnnPlayer(pred_networks[5], strat_networks[5], prediction_exploration_rate, strategy_exploration_rate)
+         for _ in range(2)]
     ]
 
     # flatten players
@@ -114,7 +130,8 @@ def main():
         [RnnPlayerInterlayer(player, normal_pred_y_func, aggressive_strat_y_func) for player in players[1: 3]],
         [RnnPlayerInterlayer(player, normal_pred_y_func, very_defensive_strat_y_func) for player in players[3: 4]],
         [RnnPlayerInterlayer(player, normal_pred_y_func, defensive_strat_y_func) for player in players[4: 6]],
-        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[6:]]
+        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[6:12]],
+        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[12:]]
     ]
     players = sum(players, [])
 
@@ -126,7 +143,7 @@ def main():
         f.write("// interval to print stats: " + str(interval_to_print_stats) + "\n")
         total_diff = 0
         total_losses = [0.0 for _ in range(len(networks))]
-        for i in range(0, total_rounds, 10):
+        for i in range(start_offset, total_rounds, 10):
             sitting.set_players(r.sample(players, 4))
             for _ in range(10):
                 total_diff += sitting.play_full_round()
@@ -164,6 +181,7 @@ def main():
                     full_name += net_name + '_' + str(i + 1) + '.h5'
                     keras_net.save_network(full_name)
             if i + 1 == round_when_adding_players:
+                print('adding players')
                 # add 2 more normal players
                 nps = [RnnPlayer(networks[-2], networks[-1], prediction_exploration_rate, strategy_exploration_rate)
                        for _ in range(2)]
