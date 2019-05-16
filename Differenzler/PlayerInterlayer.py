@@ -154,6 +154,7 @@ class RnnPlayerInterlayer(PlayerInterlayer):
 
     def end_round(self, prediction_reward: Union[int, float], strategy_reward: Union[int, float]):
         if not self._player.prediction_network._can_train:
+            self._strategy_log = []
             return
         self._player.prediction_network.add_samples([
             (self._prediction_log, prediction_reward)

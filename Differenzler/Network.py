@@ -23,7 +23,7 @@ class Network:
     def evaluate(self, network_input: np.ndarray) -> np.array:
         pass
 
-    def add_samples(self, samples: list):
+    def add_samples(self, samples: List):
         self._replay_memory.add_samples(samples)
 
     def train(self) -> float:
