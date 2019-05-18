@@ -69,7 +69,7 @@ def print_play_message(card_tnr: np.ndarray):
     print(output_str)
 
 
-assert len(sys.argv) == 3
+assert len(sys.argv) == 3, sys.argv
 
 pred_memory = ReplayMemory(1)
 strat_memory = RnnReplayMemory(1)
