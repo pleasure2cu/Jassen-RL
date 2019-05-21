@@ -4,7 +4,7 @@ from typing import List
 
 
 # see https://arxiv.org/pdf/1312.5602v1.pdf
-from Sample import RnnSample, MultiPredictionSample
+from Sample import RnnSample
 
 
 class ReplayMemory:
@@ -25,10 +25,6 @@ class ReplayMemory:
         self._items += samples
         s = min(self._size, len(self._items))
         self._items = self._items[-s:]
-
-
-class MultiReplayMemory(ReplayMemory):
-    _items: List[MultiPredictionSample]
 
 
 class RnnReplayMemory(ReplayMemory):

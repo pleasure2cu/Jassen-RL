@@ -1,20 +1,20 @@
 from typing import Tuple, List
 
-from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork
+from Network import PredictionNetwork, RnnStrategyNetwork
 import numpy as np
 
 from Sample import RnnState, RnnNetInput
-from helper_functions import get_all_possible_actions, TNRepresentation
+from helper_functions import get_all_possible_actions
 
 
-class Player:
+class RnnPlayer:
     prediction_network: PredictionNetwork
-    strategy_network: StrategyNetwork
+    strategy_network: RnnStrategyNetwork
     _prediction_exp: float
     _strategy_exp: float
-    hand: np.array  # vector of 36 entries
-    
-    def __init__(self, prediction_network: PredictionNetwork, strategy_network: StrategyNetwork,
+    hand: np.array
+
+    def __init__(self, prediction_network: PredictionNetwork, strategy_network: RnnStrategyNetwork,
                  prediction_exp: float, strategy_exp: float):
         self.prediction_network = prediction_network
         self.strategy_network = strategy_network
@@ -31,7 +31,7 @@ class Player:
         for entry in hand_vector:
             assert entry in [0, 1]
         self.hand = hand_vector
-    
+
     def make_prediction(self, position_at_table: int) -> Tuple[int, np.array]:
         """
         :return: The points the network thinks this hand will yield
@@ -44,35 +44,6 @@ class Player:
         if np.random.binomial(1, self._prediction_exp):
             return np.random.randint(158), state
         return self.prediction_network.evaluate(state), state
-
-    def play_card(self, state: np.array, played_index: int) -> Tuple[np.array, TNRepresentation]:
-        """
-        Takes state and the suit index and plays a card
-        :param state: array with the state
-        :param played_index: index of the first played suit (-1 if no card has been played this round)
-        :return: Tuple:
-                 1. entry is the whole input for the neural network of the finally chosen action.
-                 2. entry is the chosen action
-        """
-        possible_actions = get_all_possible_actions(self.hand, played_index)
-        if np.random.binomial(1, self._strategy_exp):
-            action_index = np.random.randint(len(possible_actions))
-        else:
-            net_inputs: np.ndarray = np.concatenate(
-                [np.tile(state, (len(possible_actions), 1)), possible_actions],
-                axis=1
-            )
-            assert len(net_inputs) == len(possible_actions), "there isn't an input for each possible action"
-            q_values: np.array = self.strategy_network.evaluate(net_inputs)
-            assert len(q_values) == len(net_inputs), "there aren't as many q-values as there were inputs"
-            action_index = np.argmax(q_values)
-        action = possible_actions[action_index]
-        self.hand[action[0] + 9 * action[1]] = 0
-        return np.concatenate((state, possible_actions[action_index])), possible_actions[action_index]
-
-
-class RnnPlayer(Player):
-    strategy_network: RnnStrategyNetwork
 
     def play_card(self, state: RnnState, suit: int) -> Tuple[RnnNetInput, np.array]:
         """

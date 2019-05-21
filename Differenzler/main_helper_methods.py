@@ -83,7 +83,8 @@ def prediction_resnet():
 
 def small_prediction_net():
     net_input = Input(shape=(37,))
-    net = Dense(30)(net_input)
+    net = Dense(80)(net_input)
+    net = Dense(80)(net)
     net = Dense(1)(net)
     model = Model(inputs=net_input, outputs=net)
     model.compile(optimizer='rmsprop', loss='mse')
@@ -138,13 +139,14 @@ def strategy_rnn_resnet(use_batch_norm: bool):
 
 
 def small_rnn_strategy():
-    dense_output_size = 100
-    rnn_output_size = 32
+    dense_output_size = 180
+    rnn_output_size = 100
     rnn_input = Input(shape=(None, 9))
     rnn_output = LSTM(rnn_output_size)(rnn_input)
     aux_input = Input(shape=(87,))
     concat = keras.layers.concatenate([rnn_output, aux_input])
     net = Dense(dense_output_size)(concat)
+    net = Dense(dense_output_size)(net)
     net = Dense(dense_output_size)(net)
     net = Dense(dense_output_size)(net)
     final_tensor = Dense(1)(net)

@@ -44,18 +44,3 @@ class RnnState:
         assert len(aux_part.shape) == 1
         self.rnn_part = rnn_part
         self.aux_part = aux_part
-
-
-class MultiPredictionSample:
-    """
-    This class is used for the times when the prediction network doesn't map to 1 but multiple output neurons
-    """
-    state_vector: np.ndarray  # actually 1D array
-    guessed_points: int
-    reward: Union[float, int]
-
-    def __init__(self, state_vector: np.ndarray, guessed_points: int, reward: Union[float, int]):
-        assert len(state_vector.shape) == 1, state_vector
-        self.state_vector = state_vector
-        self.guessed_points = guessed_points
-        self.reward = reward

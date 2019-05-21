@@ -2,9 +2,8 @@ from typing import List, Tuple
 
 import numpy as np
 
-from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer
+from PlayerInterlayer import RnnPlayerInterlayer
 from helper_functions import get_winning_card_index, get_points_from_table
-
 
 PlayerInterlayerType = RnnPlayerInterlayer
 
@@ -47,20 +46,14 @@ class Sitting:
         assert np.all(tmp_hand == 1), "the cards the players know don't form a full set of cards"
 
         # play cards
-        gone_cards = np.zeros(36)
         blie_history: List[Tuple[np.ndarray, int]] = []
         for blie_index in range(9):
-            if self._debugging:
-                assert np.sum(gone_cards) == 4 * blie_index
-                assert not np.any(gone_cards < 0), "in the gone cards vector there are negative entries"
-                assert not np.any(gone_cards > 1), "in the gone cards vector there are entries > 1"
             table = np.ones((4, 2)) * -1
             table_suit = -1
             for i in range(4):
                 assert np.sum(table == -1) == (4 - i) * 2
-                played_card = self._players[player_index] \
-                    .play_card(table, (player_index - i) % 4, gone_cards,
-                               predictions[player_index] - points_made[player_index], blie_history)
+                played_card = self._players[player_index].play_card(table, (player_index - i) % 4,
+                            predictions[player_index] - points_made[player_index], blie_history)
                 gone_cards[played_card[0] + played_card[1] * 9] = 1
                 if table_suit < 0:
                     table_suit = played_card[1]

@@ -2,23 +2,23 @@ import datetime
 import random
 
 import numpy as np
-
 from keras.models import load_model
-from Memory import ReplayMemory, RnnReplayMemory, MultiReplayMemory
-from Network import PredictionNetwork, StrategyNetwork, RnnStrategyNetwork, MultiPredictionNetwork
-from Player import Player, RnnPlayer
-from PlayerInterlayer import PlayerInterlayer, RnnPlayerInterlayer, RnnMultiPlayerInterlayer
+
+from Memory import ReplayMemory, RnnReplayMemory
+from Network import PredictionNetwork, RnnStrategyNetwork
+from Player import RnnPlayer
+from PlayerInterlayer import RnnPlayerInterlayer
 from Sitting import Sitting
-from main_helper_methods import prediction_resnet, strategy_rnn_resnet, normal_pred_y_func, normal_strat_y_func, \
-    aggressive_strat_y_func, defensive_strat_y_func, small_prediction_net, small_strategy_net, \
-    very_aggressive_strat_y_func, very_defensive_strat_y_func
+from main_helper_methods import normal_pred_y_func, normal_strat_y_func, \
+    aggressive_strat_y_func, defensive_strat_y_func, small_prediction_net, very_aggressive_strat_y_func, \
+    very_defensive_strat_y_func, small_rnn_strategy
 
 prediction_save_path = './saved_nets/prediction/'
 strategy_save_path = './saved_nets/strategy/'
 
 # Parameters
-prediction_replay_memory_size = 100000
-strategy_replay_memory_size = 20000
+prediction_replay_memory_size = 1500
+strategy_replay_memory_size = 1500
 
 prediction_net_batch_size = 64
 strategy_net_batch_size = 128
@@ -30,9 +30,9 @@ size_of_one_strat_net_input = 83
 
 total_rounds = 8000000
 rounds_until_save = 100000
-interval_to_print_stats = 50000
-round_when_adding_players = 1200000
-start_offset = 1000
+interval_to_print_stats = 25000
+round_when_adding_players = 1000000
+start_offset = 0
 
 only_train_in_turn = False
 turn_size = 2
@@ -59,49 +59,43 @@ if round_when_adding_players % rounds_until_save != 0:
 def main():
     # create replay memories
     pred_memories = [ReplayMemory(prediction_replay_memory_size) for _ in range(5)]
-    pred_memories.append(ReplayMemory(1))
     strat_memories = [RnnReplayMemory(strategy_replay_memory_size) for _ in range(5)]
-    strat_memories.append(RnnReplayMemory(1))
 
     # create Networks
     pred_networks = [
-        PredictionNetwork(load_model(''), pred_memories[0], prediction_net_batch_size, True),
-        PredictionNetwork(load_model(''), pred_memories[1], prediction_net_batch_size, True),
-        PredictionNetwork(load_model(''), pred_memories[2], prediction_net_batch_size, True),
-        PredictionNetwork(load_model(''), pred_memories[3], prediction_net_batch_size, True),
-        PredictionNetwork(load_model(''), pred_memories[4], prediction_net_batch_size, True),
-        PredictionNetwork(load_model(''), pred_memories[5], prediction_net_batch_size, False)
+        PredictionNetwork(small_prediction_net(), pred_memories[0], prediction_net_batch_size, True),
+        PredictionNetwork(small_prediction_net(), pred_memories[1], prediction_net_batch_size, True),
+        PredictionNetwork(small_prediction_net(), pred_memories[2], prediction_net_batch_size, True),
+        PredictionNetwork(small_prediction_net(), pred_memories[3], prediction_net_batch_size, True),
+        PredictionNetwork(small_prediction_net(), pred_memories[4], prediction_net_batch_size, True)
     ]
-    print(prediction_resnet().summary())
+    print(pred_networks[0]._neural_network.summary())
     strat_networks = [
-        RnnStrategyNetwork(load_model(''), strat_memories[0], strategy_net_batch_size, True),
-        RnnStrategyNetwork(load_model(''), strat_memories[1], strategy_net_batch_size, True),
-        RnnStrategyNetwork(load_model(''), strat_memories[2], strategy_net_batch_size, True),
-        RnnStrategyNetwork(load_model(''), strat_memories[3], strategy_net_batch_size, True),
-        RnnStrategyNetwork(load_model(''), strat_memories[4], strategy_net_batch_size, True),
-        RnnStrategyNetwork(load_model(''), strat_memories[5], strategy_net_batch_size, False)
+        RnnStrategyNetwork(small_rnn_strategy(), strat_memories[0], strategy_net_batch_size, True),
+        RnnStrategyNetwork(small_rnn_strategy(), strat_memories[1], strategy_net_batch_size, True),
+        RnnStrategyNetwork(small_rnn_strategy(), strat_memories[2], strategy_net_batch_size, True),
+        RnnStrategyNetwork(small_rnn_strategy(), strat_memories[3], strategy_net_batch_size, True),
+        RnnStrategyNetwork(small_rnn_strategy(), strat_memories[4], strategy_net_batch_size, True)
     ]
-    print(strategy_rnn_resnet(use_batch_norm).summary())
+    print(strat_networks[0]._neural_network.summary())
 
     # make pairs of the networks
     networks = list(sum(zip(pred_networks, strat_networks), ()))
 
     # give each network a name
     pred_network_names = [
-        'very_aggressive_prediction',
-        'aggressive_prediction',
-        'very_defensive_prediction',
-        'defensive_prediction',
-        'normal_prediction',
-        'frozen_normal_prediction'
+        'wide_rnn_very_aggressive_prediction',
+        'wide_rnn_aggressive_prediction',
+        'wide_rnn_very_defensive_prediction',
+        'wide_rnn_defensive_prediction',
+        'wide_rnn_normal_prediction'
     ]
     strat_network_names = [
-        'very_aggressive_strategy',
-        'aggressive_strategy',
-        'very_defensive_strategy',
-        'defensive_strategy',
-        'normal_strategy',
-        'frozen_normal_strategy'
+        'wide_rnn_very_aggressive_strategy',
+        'wide_rnn_aggressive_strategy',
+        'wide_rnn_very_defensive_strategy',
+        'wide_rnn_defensive_strategy',
+        'wide_rnn_normal_strategy'
     ]
 
     # make the same pairs as above
@@ -116,9 +110,7 @@ def main():
         [RnnPlayer(pred_networks[3], strat_networks[3], prediction_exploration_rate, strategy_exploration_rate)
          for _ in range(2)],
         [RnnPlayer(pred_networks[4], strat_networks[4], prediction_exploration_rate, strategy_exploration_rate)
-         for _ in range(6)],
-        [RnnPlayer(pred_networks[5], strat_networks[5], prediction_exploration_rate, strategy_exploration_rate)
-         for _ in range(2)]
+         for _ in range(4)]
     ]
 
     # flatten players
@@ -130,8 +122,7 @@ def main():
         [RnnPlayerInterlayer(player, normal_pred_y_func, aggressive_strat_y_func) for player in players[1: 3]],
         [RnnPlayerInterlayer(player, normal_pred_y_func, very_defensive_strat_y_func) for player in players[3: 4]],
         [RnnPlayerInterlayer(player, normal_pred_y_func, defensive_strat_y_func) for player in players[4: 6]],
-        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[6:12]],
-        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[12:]]
+        [RnnPlayerInterlayer(player, normal_pred_y_func, normal_strat_y_func) for player in players[6:]]
     ]
     players = sum(players, [])
 
@@ -139,7 +130,7 @@ def main():
     sitting = Sitting(debugging)
     last_stop = datetime.datetime.now()
     r = random.Random()
-    with open('stats.txt', 'w') as f:
+    with open('stats_dev.txt', 'w') as f:
         f.write("// interval to print stats: " + str(interval_to_print_stats) + "\n")
         total_diff = 0
         total_losses = [0.0 for _ in range(len(networks))]
