@@ -45,75 +45,13 @@ def very_defensive_strat_y_func(predicted_points: int, made_points: int) -> int:
     return output
 
 
-def prediction_vanilla_ffn():
-    net = keras.Sequential([
-        keras.layers.Dense(30, activation='relu', input_shape=(37,)),
-        keras.layers.Dense(30, activation='relu'),
-        keras.layers.Dense(1)
-    ])
-    net.compile(optimizer='rmsprop', loss='mse')
-    return net
-
-
-def strategy_vanilla_ffn(size_of_one_strat_net_input: int):
-    net = keras.Sequential([
-        keras.layers.Dense(120, activation='relu', input_shape=(size_of_one_strat_net_input,)),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(120, activation='relu'),
-        keras.layers.Dense(60, activation='relu'),
-        keras.layers.Dense(1)
-    ])
-    net.compile(optimizer='rmsprop', loss='mse')
-    return net
-
-
 def prediction_resnet():
     dense_output_size = 50
     net_input = Input(shape=(37,))
     layer_1 = Dense(dense_output_size, activation='relu')(net_input)
-    layer_2 = Dense(dense_output_size, activation='relu')(layer_1)
-    layer_3 = Dense(dense_output_size, activation='relu')(layer_2)
+    layer_3 = Dense(dense_output_size, activation='relu')(layer_1)
     res_sum = keras.layers.add([layer_1, layer_3])
     final_tensor = Dense(1)(res_sum)
-    model = Model(inputs=net_input, outputs=final_tensor)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
-
-
-def small_prediction_net():
-    net_input = Input(shape=(37,))
-    net = Dense(80)(net_input)
-    net = Dense(80)(net)
-    net = Dense(1)(net)
-    model = Model(inputs=net_input, outputs=net)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
-
-
-def prediction_multi_resnet():
-    dense_output_size = 100
-    net_input = Input(shape=(37,))
-    layer_1 = Dense(dense_output_size, activation='relu')(net_input)
-    layer_2 = Dense(dense_output_size, activation='relu')(layer_1)
-    layer_3 = Dense(dense_output_size, activation='relu')(layer_2)
-    res_sum = keras.layers.add([layer_1, layer_3])
-    final_tensor = Dense(79)(res_sum)
-    model = Model(inputs=net_input, outputs=final_tensor)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
-
-
-def strategy_resnet(use_batch_norm: bool, size_of_one_strat_net_input: int):
-    dense_output_size = 120
-    net_input = Input(shape=(size_of_one_strat_net_input,))
-    net = Dense(dense_output_size)(net_input)
-    if use_batch_norm:
-        net = BatchNormalization()(net)
-    net = Activation('relu')(net)
-    for _ in range(3):
-        net = resnet_block(net, dense_output_size, use_batch_norm)
-    final_tensor = Dense(1)(net)
     model = Model(inputs=net_input, outputs=final_tensor)
     model.compile(optimizer='rmsprop', loss='mse')
     return model
@@ -138,30 +76,34 @@ def strategy_rnn_resnet(use_batch_norm: bool):
     return model
 
 
-def small_rnn_strategy():
-    dense_output_size = 180
-    rnn_output_size = 100
-    rnn_input = Input(shape=(None, 9))
-    rnn_output = LSTM(rnn_output_size)(rnn_input)
-    aux_input = Input(shape=(87,))
-    concat = keras.layers.concatenate([rnn_output, aux_input])
-    net = Dense(dense_output_size)(concat)
-    net = Dense(dense_output_size)(net)
-    net = Dense(dense_output_size)(net)
-    net = Dense(dense_output_size)(net)
-    final_tensor = Dense(1)(net)
-    model = Model(inputs=[rnn_input, aux_input], outputs=final_tensor)
-    model.compile(optimizer='rmsprop', loss='mse')
-    return model
+def _deep_lstm():
+    lstm_size = 270 // 5
+    dense_size = 270 // 5
+    inp = Input(shape=(None, 9))
+    dense1 = Dense(dense_size, activation='relu')(inp)
+    lstm1 = LSTM(lstm_size, return_sequences=True)(dense1)
+    dense2 = Dense(dense_size, activation='relu')(lstm1)
+    lstm2 = LSTM(lstm_size, return_sequences=True)(dense2)
+    return inp, lstm2
 
 
-def small_strategy_net():
-    rnn_output_size = 32
-    rnn_input = Input(shape=(None, 9))
-    rnn_output = LSTM(rnn_output_size)(rnn_input)
-    aux_input = Input(shape=(87,))
-    concat = keras.layers.concatenate([rnn_output, aux_input])
-    net = Dense(1)(concat)
-    model = Model(inputs=[rnn_input, aux_input], outputs=net)
+def _deep_lstm2():
+    lstm_size = 100
+    inp = Input(shape=(None, 9))
+    lstm1 = LSTM(lstm_size, return_sequences=True)(inp)
+    lstm2 = LSTM(lstm_size, return_sequences=True)(lstm1)
+    lstm3 = LSTM(lstm_size)(lstm2)
+    return inp, lstm3
+
+
+def strategy_deep_lstm_resnet():
+    dense_size = 200
+    lstm_in, lstm_out = _deep_lstm2()
+    aux_inp = Input(shape=(47,))
+    concat = keras.layers.concatenate([lstm_out, aux_inp])
+    tmp = Dense(dense_size, activation='relu')(concat)
+    tmp = Dense(dense_size, activation='relu')(tmp)
+    out = Dense(1)(tmp)
+    model = Model(inputs=[lstm_in, aux_inp], outputs=out)
     model.compile(optimizer='rmsprop', loss='mse')
     return model

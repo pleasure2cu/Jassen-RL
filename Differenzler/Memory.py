@@ -11,10 +11,12 @@ class ReplayMemory:
 
     _size: int
     _items: List
+    _index: int
 
     def __init__(self, size: int):
         self._size = size
         self._items = []
+        self._index = 0
 
     def draw_samples(self, n: int):
         assert n >= 0

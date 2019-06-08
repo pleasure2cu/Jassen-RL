@@ -54,7 +54,6 @@ class Sitting:
                 assert np.sum(table == -1) == (4 - i) * 2
                 played_card = self._players[player_index].play_card(table, (player_index - i) % 4,
                             predictions[player_index] - points_made[player_index], blie_history)
-                gone_cards[played_card[0] + played_card[1] * 9] = 1
                 if table_suit < 0:
                     table_suit = played_card[1]
                 table[player_index] = played_card

@@ -11,6 +11,6 @@ model.compile(optimizer='rmsprop', loss="mse")
 x = np.array([[[1, 2], [3, 4]], [[4, 3], [2, 1]]])
 y = np.array([1, -1])
 
-model.fit(x, y, epochs=1000)
+model.fit(x, y, epochs=100)
 
 print(model.predict(np.reshape(x[0], (-1, 2, 2))))
