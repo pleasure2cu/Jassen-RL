@@ -63,9 +63,9 @@ class RnnPlayerInterlayer:
         roll_array = self._table_roll_array
         for i in range(len(blie_history)):
             rnn_input_vector[i * 9: i * 9 + 8] = np.reshape(blie_history[i][0], -1)[roll_array]
-            rnn_input_vector[i * 9 + 8] = (blie_history[i][1] - 4) % 4
+            rnn_input_vector[i * 9 + 8] = blie_history[i][1] % 4
         rnn_input_vector[-9: -1] = np.reshape(table_cards, -1)[roll_array]
-        rnn_input_vector[-1] = (index_of_first_card - 4) % 4
+        rnn_input_vector[-1] = index_of_first_card % 4
 
         dense_input_vector = np.concatenate((
             np.reshape(table_cards, -1)[roll_array],
@@ -76,14 +76,14 @@ class RnnPlayerInterlayer:
         # produce the input to the strategy network
         state = RnnState(np.reshape(rnn_input_vector, (-1, 9)), dense_input_vector)
 
-        # get the action an keep it logged
+        # get the action and keep it logged
         net_input, action = self._player.play_card(state, int(table_cards[index_of_first_card][1]))
         self._strategy_log.append(net_input)
         self._round_index += 1
         return action
 
     def end_round(self, prediction_reward: Union[int, float], strategy_reward: Union[int, float]):
-        if not self._player.prediction_network._can_train:
+        if not self._player.prediction_network.can_train:
             self._strategy_log = []
             return
         self._player.prediction_network.add_samples([

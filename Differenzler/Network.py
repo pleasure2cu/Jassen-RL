@@ -11,13 +11,13 @@ class Network:
     _replay_memory: ReplayMemory
     _neural_network: keras
     _batch_size: int
-    _can_train: bool
+    can_train: bool
 
     def __init__(self, neural_network: keras, memory: ReplayMemory, batch_size: int, can_train: bool):
         self._neural_network = neural_network
         self._replay_memory = memory
         self._batch_size = batch_size
-        self._can_train = can_train
+        self.can_train = can_train
 
     def evaluate(self, network_input: np.ndarray) -> np.array:
         pass
@@ -26,7 +26,7 @@ class Network:
         self._replay_memory.add_samples(samples)
 
     def train(self) -> float:
-        if not self._can_train:
+        if not self.can_train:
             return -1
         samples = self._replay_memory.draw_samples(self._batch_size)
         n = len(samples)
@@ -53,7 +53,7 @@ class RnnStrategyNetwork(Network):
     _replay_memory: RnnReplayMemory
 
     def train(self) -> float:
-        if not self._can_train:
+        if not self.can_train:
             return -1
         samples = self._replay_memory.draw_samples(self._batch_size)
         n = len(samples)

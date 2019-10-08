@@ -26,7 +26,7 @@ def get_all_possible_actions(hand: np.array, first_played_suit: int) -> np.ndarr
     :param first_played_suit: in [-1, 4]
     :return: all possible actions in two number representation as np.ndarray (first axis are the different options)
     """
-    assert first_played_suit in range(-1, 4), "the values is " + str(first_played_suit)
+    assert first_played_suit in range(-1, 4), "the value is " + str(first_played_suit)
     if first_played_suit == 0:
         if np.any(hand[1: 9]):
             playable_cards = hand[:9]
@@ -85,9 +85,10 @@ def turn_rnn_samples_into_batch(samples: List[RnnSample]) -> Tuple[np.ndarray, n
 def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool):
     """
     implements one resnet block. Meaning:
-        Input_tensor ---> Dense -> BN -> ReLU -> Dense -> BN ---> ReLU
+                       _______________________________________
                       |                                       |
-                       ---------------------------------------
+        Input_tensor ---> Dense -> BN -> ReLU -> Dense -> BN ---> ReLU
+
     the resulting tensor of the last ReLU will be the return
     :param input_tensor: as name says
     :param layer_size: size of the output of the input_tensor
