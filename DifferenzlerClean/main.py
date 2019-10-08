@@ -12,6 +12,7 @@ from sitting import DifferenzlerSitting
 
 number_of_epochs = 5
 epoch_size = 15_000
+batch_size = 192
 
 
 def main():
@@ -32,7 +33,7 @@ def main():
         players = [
             RnnPlayer(
                 pred_model, strat_model, pred_memory, strat_memory,
-                normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, 64
+                normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size
             )
             for _ in range(4)
         ]
@@ -46,7 +47,7 @@ def main():
             total_loss_s = 0.
             for i in range(epoch_size):
                 print("{}".format(epoch_index*epoch_size+i))
-                loss_p, loss_s, diffs = sitting.play_full_round(train=epoch_size % 10 == 0)
+                loss_p, loss_s, diffs = sitting.play_full_round(train=epoch_size % 3 == 0)
                 total_diff += np.sum(diffs)
                 total_loss_p += loss_p
                 total_loss_s += loss_s
