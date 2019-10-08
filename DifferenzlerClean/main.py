@@ -45,7 +45,7 @@ def main():
             total_loss_p = 0.
             total_loss_s = 0.
             for i in range(epoch_size):
-                print("{}".format(epoch_index*epoch_size+i), end='\r')
+                print("{}".format(epoch_index*epoch_size+i))
                 loss_p, loss_s, diffs = sitting.play_full_round(train=epoch_size % 10 == 0)
                 total_diff += np.sum(diffs)
                 total_loss_p += loss_p
