@@ -24,8 +24,8 @@ def main():
 
         print("\n\n\nCurrently training: {}".format(name_base))
 
-        pred_memory = ReplayMemory(1_000*3)
-        strat_memory = RnnReplayMemory(9_000*3)
+        pred_memory = ReplayMemory(1_000*6)
+        strat_memory = RnnReplayMemory(9_000*6)
 
         pred_model = pred_model_func()
         strat_model = strat_model_func()
