@@ -144,7 +144,10 @@ class RnnPlayer(DifferenzlerPlayer):
         self._prediction_pool.append(model_input)
         if np.random.binomial(1, self._prediction_exp):
             return np.random.randint(158)
-        return int(self._prediction_model.predict(model_input)[0] + 0.5)
+        tmp = datetime.datetime.now()
+        prediction = int(self._prediction_model.predict(model_input)[0] + 0.5)
+        RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+        return prediction
 
     def play_card(self, state: GameState, suit: int) -> np.ndarray:
         possible_actions = get_possible_actions(self._hand_vector, suit)

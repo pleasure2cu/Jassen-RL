@@ -1,7 +1,8 @@
 import keras
 import numpy as np
 from keras import Input, Model
-from keras.layers import LSTM, Dense, Activation, BatchNormalization, SimpleRNN
+from keras.layers import LSTM, Dense, Activation, BatchNormalization, SimpleRNN, CuDNNLSTM
+from keras import backend as K
 
 
 def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool):
@@ -114,9 +115,10 @@ def _deep_lstm():
 
 def _deep_lstm2(lstm_size=100):
     inp = Input(shape=(None, 9))
-    lstm1 = LSTM(lstm_size, return_sequences=True)(inp)
-    lstm2 = LSTM(lstm_size, return_sequences=True)(lstm1)
-    lstm3 = LSTM(lstm_size)(lstm2)
+    lstm_f = LSTM if len(K.tensorflow_backend._get_available_gpus()) == 0 else CuDNNLSTM
+    lstm1 = lstm_f(lstm_size, return_sequences=True)(inp)
+    lstm2 = lstm_f(lstm_size, return_sequences=True)(lstm1)
+    lstm3 = lstm_f(lstm_size)(lstm2)
     return inp, lstm3
 
 
@@ -164,7 +166,8 @@ def tiny_strategy_network():
     dense_output_size = 140
     rnn_output_size = 70
     rnn_input = Input(shape=(None, 9))
-    rnn_output = LSTM(rnn_output_size)(rnn_input)
+    rnn_output = LSTM(rnn_output_size)(rnn_input) if len(K.tensorflow_backend._get_available_gpus()) == 0 \
+        else CuDNNLSTM(rnn_output_size)(rnn_input)
     aux_input = Input(shape=(47,))
     concat = keras.layers.concatenate([rnn_output, aux_input])
     net = Dense(dense_output_size, activation='relu')(concat)
