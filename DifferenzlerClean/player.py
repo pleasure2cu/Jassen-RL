@@ -1,3 +1,4 @@
+import datetime
 from typing import List, Tuple, Callable, Union
 
 import keras
@@ -110,6 +111,8 @@ class RnnPlayer(DifferenzlerPlayer):
     _table_roll_indices: np.ndarray
     _batch_size: int
 
+    total_time_spent_in_keras = datetime.timedelta()
+
     def __init__(
             self,
             prediction_model: keras.Model, strategy_model: keras.Model,
@@ -162,7 +165,9 @@ class RnnPlayer(DifferenzlerPlayer):
         if np.random.binomial(1, self._strategy_exp):
             index = np.random.randint(nbr_of_actions)
         else:
+            tmp = datetime.datetime.now()
             index = np.argmin(self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor]))
+            RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
 
         self._strategy_pool.append((rnn_state_tensor[index], aux_state_action_tensor[index]))
         action = possible_actions[index]
@@ -180,8 +185,10 @@ class RnnPlayer(DifferenzlerPlayer):
             boosted_strat_pool += boost_color_strat_sample(rnn_input, aux_input)
         self._strategy_memory.add_samples(boosted_strat_pool, self._strategy_y_function(prediction, made_points))
         if train:
+            tmp = datetime.datetime.now()
             pred_loss = self._prediction_model.train_on_batch(*self._prediction_memory.draw_batch(self._batch_size))
             strat_loss = self._strategy_model.train_on_batch(*self._strategy_memory.draw_batch(self._batch_size))
+            RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
             return pred_loss, strat_loss
         return 0.0, 0.0
 

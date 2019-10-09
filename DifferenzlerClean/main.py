@@ -11,7 +11,7 @@ from sitting import DifferenzlerSitting
 
 
 number_of_epochs = 5
-epoch_size = 15_000
+epoch_size = 300
 batch_size = 192
 
 
@@ -46,7 +46,7 @@ def main():
             total_loss_p = 0.
             total_loss_s = 0.
             for i in range(epoch_size):
-                print("{}".format(epoch_index*epoch_size+i))
+                # print("{}".format(epoch_index*epoch_size+i), end='\r')
                 loss_p, loss_s, diffs = sitting.play_full_round(train=epoch_size % 3 == 0)
                 total_diff += np.sum(diffs)
                 total_loss_p += loss_p
@@ -55,6 +55,8 @@ def main():
                 assert strat_memory.assert_items()
             print(datetime.datetime.now() - epoch_start_time)
             print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4, total_loss_p, total_loss_s))
+            print("time spent in keras = {}".format(RnnPlayer.total_time_spent_in_keras))
+            RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
 
         pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
         strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
