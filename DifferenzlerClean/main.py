@@ -47,16 +47,30 @@ def main():
             total_loss_s = 0.
             for i in range(epoch_size):
                 # print("{}".format(epoch_index*epoch_size+i), end='\r')
-                loss_p, loss_s, diffs = sitting.play_full_round(train=epoch_size % 3 == 0)
+                loss_p, loss_s, diffs = sitting.play_full_round(train=False)
                 total_diff += np.sum(diffs)
                 total_loss_p += loss_p
                 total_loss_s += loss_s
                 assert pred_memory.assert_items()
                 assert strat_memory.assert_items()
+                fit_window = 12
+                if i % fit_window == 0:
+                    sample_limit = 4 * fit_window // 3 * batch_size
+
+                    xs_pred, ys_pred = pred_memory.draw_batch(sample_limit)
+                    xs_strat, ys_strat = strat_memory.draw_batch(sample_limit)
+
+                    tmp = datetime.datetime.now()
+                    pred_model.fit(xs_pred, ys_pred, batch_size=batch_size, verbose=0)
+                    strat_model.fit(xs_strat, ys_strat, batch_size=batch_size, verbose=0)
+                    RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+                    RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
             print(datetime.datetime.now() - epoch_start_time)
             print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4, total_loss_p, total_loss_s))
             print("time spent in keras = {}".format(RnnPlayer.total_time_spent_in_keras))
+            print("time spent training = {}".format(RnnPlayer.time_spent_training))
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
+            RnnPlayer.time_spent_training = datetime.timedelta()
 
         pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
         strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))

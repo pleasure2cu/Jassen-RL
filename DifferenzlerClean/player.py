@@ -112,6 +112,7 @@ class RnnPlayer(DifferenzlerPlayer):
     _batch_size: int
 
     total_time_spent_in_keras = datetime.timedelta()
+    time_spent_training = datetime.timedelta()
 
     def __init__(
             self,
@@ -192,6 +193,7 @@ class RnnPlayer(DifferenzlerPlayer):
             pred_loss = self._prediction_model.train_on_batch(*self._prediction_memory.draw_batch(self._batch_size))
             strat_loss = self._strategy_model.train_on_batch(*self._strategy_memory.draw_batch(self._batch_size))
             RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+            RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
             return pred_loss, strat_loss
         return 0.0, 0.0
 
