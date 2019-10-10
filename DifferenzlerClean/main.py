@@ -13,6 +13,7 @@ from sitting import DifferenzlerSitting
 number_of_epochs = 5
 epoch_size = 300
 batch_size = 192
+fit_window = 12
 
 
 def main():
@@ -53,9 +54,8 @@ def main():
                 total_loss_s += loss_s
                 assert pred_memory.assert_items()
                 assert strat_memory.assert_items()
-                fit_window = 12
                 if i % fit_window == 0:
-                    sample_limit = 4 * fit_window // 3 * batch_size
+                    sample_limit = 4 * 4 * batch_size
 
                     xs_pred, ys_pred = pred_memory.draw_batch(sample_limit)
                     xs_strat, ys_strat = strat_memory.draw_batch(sample_limit)

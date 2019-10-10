@@ -153,27 +153,30 @@ class RnnPlayer(DifferenzlerPlayer):
     def play_card(self, state: GameState, suit: int) -> np.ndarray:
         possible_actions = get_possible_actions(self._hand_vector, suit)
         nbr_of_actions = len(possible_actions)
-        rnn_state_tensor = np.tile(
-            self._get_relative_rnn_input(state),
-            (nbr_of_actions, 1, 1)
-        )
-        relative_table = state.blies_history[state.current_blie_index][self._table_roll_indices[:8]]
-        current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
-        aux_state_tensor = np.tile(
-            np.concatenate([self._hand_vector, relative_table, current_difference]),
-            (nbr_of_actions, 1)
-        )
-        aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
-
-        # get the index of the action we want to play
-        if np.random.binomial(1, self._strategy_exp):
-            index = np.random.randint(nbr_of_actions)
+        if nbr_of_actions == 1:
+            index = 0
         else:
-            tmp = datetime.datetime.now()
-            index = np.argmin(self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor]))
-            RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+            rnn_state_tensor = np.tile(
+                self._get_relative_rnn_input(state),
+                (nbr_of_actions, 1, 1)
+            )
+            relative_table = state.blies_history[state.current_blie_index][self._table_roll_indices[:8]]
+            current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
+            aux_state_tensor = np.tile(
+                np.concatenate([self._hand_vector, relative_table, current_difference]),
+                (nbr_of_actions, 1)
+            )
+            aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
 
-        self._strategy_pool.append((rnn_state_tensor[index], aux_state_action_tensor[index]))
+            # get the index of the action we want to play
+            if np.random.binomial(1, self._strategy_exp):
+                index = np.random.randint(nbr_of_actions)
+            else:
+                tmp = datetime.datetime.now()
+                index = np.argmin(self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor]))
+                RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+            self._strategy_pool.append((rnn_state_tensor[index], aux_state_action_tensor[index]))
+
         action = possible_actions[index]
         self._hand_vector[action[0] + 9 * action[1]] = 0
         return action

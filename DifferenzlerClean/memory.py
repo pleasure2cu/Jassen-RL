@@ -38,15 +38,16 @@ class ReplayMemory(Memory):
 
 class RnnReplayMemory(Memory):
 
+    _nbr_of_sublists = 8
     _class_size: int
     _items: List[List[Tuple[np.ndarray, np.ndarray, Union[float, int]]]]
 
     def __init__(self, size: int):
-        self._class_size = int(size / 9 + 0.5)
-        self._items = [[] for _ in range(9)]
+        self._class_size = int(size / RnnReplayMemory._nbr_of_sublists + 0.5)
+        self._items = [[] for _ in range(RnnReplayMemory._nbr_of_sublists)]
 
     def draw_batch(self, size: int) -> Tuple[List[np.ndarray], np.ndarray]:
-        series_length_index = np.random.randint(9)
+        series_length_index = np.random.randint(RnnReplayMemory._nbr_of_sublists)
         n = min(size, len(self._items[series_length_index]))
         sample_tuples = random.sample(self._items[series_length_index], n)
         rnn_batch, aux_batch, y_batch = zip(*sample_tuples)
@@ -61,7 +62,7 @@ class RnnReplayMemory(Memory):
 
     def assert_items(self) -> bool:
         for player_i in range(1, 5):
-            for series_i in range(1, 9):
+            for series_i in range(1, RnnReplayMemory._nbr_of_sublists):
                 tuple_before = self._items[series_i - 1][-player_i]
                 tuple_now = self._items[series_i][-player_i]
                 # check that the y is always the same
