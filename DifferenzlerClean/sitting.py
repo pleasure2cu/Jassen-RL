@@ -121,15 +121,15 @@ class DifferenzlerSitting(Sitting):
 
     def play_full_round(self, train: bool, nbr_of_parallel_rounds: int = 1) -> Any:
         predictions, points_made = self.play_cards(nbr_of_parallel_rounds=nbr_of_parallel_rounds)
-        predictions = np.sum(predictions, axis=0) / len(predictions)
-        points_made = np.sum(points_made, axis=0) / len(points_made)
         total_pred_loss = 0.
         total_strat_loss = 0.
-        for prediction, made, player in zip(predictions, points_made, self._players):
-            p_loss, s_loss = player.finish_round(prediction, made, train)
-            total_pred_loss += p_loss
-            total_strat_loss += s_loss
-        return total_pred_loss, total_strat_loss, np.absolute(predictions - points_made)
+        for i in range(nbr_of_parallel_rounds):
+            for prediction, made, player in zip(predictions[i], points_made[i], self._players[i*4: (i+1)*4]):
+                p_loss, s_loss = player.finish_round(prediction, made, train)
+                total_pred_loss += p_loss
+                total_strat_loss += s_loss
+        diffs = np.sum(np.absolute(predictions - points_made), axis=0)
+        return total_pred_loss, total_strat_loss, diffs
 
     def _deal_cards(self, player_offset: int = 0):
         distribution = np.random.permutation(np.arange(36))

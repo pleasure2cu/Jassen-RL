@@ -14,6 +14,11 @@ number_of_epochs = 5
 epoch_size = 300
 batch_size = 192
 fit_window = 12
+parallel_rounds = 12
+
+if parallel_rounds % fit_window != 0:
+    print("fit_window is not a multiple of parallel_rounds, so the system won't train.")
+    exit()
 
 
 def main():
@@ -46,9 +51,9 @@ def main():
             total_diff = 0
             total_loss_p = 0.
             total_loss_s = 0.
-            for i in range(0, epoch_size, 12):
+            for i in range(0, epoch_size, parallel_rounds):
                 # print("{}".format(epoch_index*epoch_size+i), end='\r')
-                loss_p, loss_s, diffs = sitting.play_full_round(train=False, nbr_of_parallel_rounds=12)
+                loss_p, loss_s, diffs = sitting.play_full_round(train=False, nbr_of_parallel_rounds=parallel_rounds)
                 total_diff += np.sum(diffs)
                 total_loss_p += loss_p
                 total_loss_s += loss_s
@@ -66,7 +71,7 @@ def main():
                     RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
                     RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
             print(datetime.datetime.now() - epoch_start_time)
-            print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4*12, total_loss_p, total_loss_s))
+            print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4, total_loss_p, total_loss_s))
             print("time spent in keras = {}".format(RnnPlayer.total_time_spent_in_keras))
             print("time spent training = {}".format(RnnPlayer.time_spent_training))
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
