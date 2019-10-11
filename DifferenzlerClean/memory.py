@@ -38,7 +38,7 @@ class ReplayMemory(Memory):
 
 class RnnReplayMemory(Memory):
 
-    _nbr_of_sublists = 8
+    _nbr_of_sublists = 9
     _class_size: int
     _items: List[List[Tuple[np.ndarray, np.ndarray, Union[float, int]]]]
 

@@ -36,7 +36,7 @@ def main():
                 pred_model, strat_model, pred_memory, strat_memory,
                 normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size
             )
-            for _ in range(4)
+            for _ in range(4 * 12)
         ]
 
         sitting = DifferenzlerSitting()
@@ -46,9 +46,9 @@ def main():
             total_diff = 0
             total_loss_p = 0.
             total_loss_s = 0.
-            for i in range(epoch_size):
+            for i in range(0, epoch_size, 12):
                 # print("{}".format(epoch_index*epoch_size+i), end='\r')
-                loss_p, loss_s, diffs = sitting.play_full_round(train=False)
+                loss_p, loss_s, diffs = sitting.play_full_round(train=False, nbr_of_parallel_rounds=12)
                 total_diff += np.sum(diffs)
                 total_loss_p += loss_p
                 total_loss_s += loss_s
@@ -66,7 +66,7 @@ def main():
                     RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
                     RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
             print(datetime.datetime.now() - epoch_start_time)
-            print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4, total_loss_p, total_loss_s))
+            print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4*12, total_loss_p, total_loss_s))
             print("time spent in keras = {}".format(RnnPlayer.total_time_spent_in_keras))
             print("time spent training = {}".format(RnnPlayer.time_spent_training))
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()

@@ -150,6 +150,39 @@ class RnnPlayer(DifferenzlerPlayer):
         RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
         return prediction
 
+    _current_possible_actions: np.ndarray
+    _current_rnn_state_tensors: np.ndarray
+    _current_aux_state_action_tensors: np.ndarray
+
+    def form_nn_input_tensors(self, state: GameState, suit: int) -> Tuple[np.ndarray, np.ndarray]:
+        possible_actions = get_possible_actions(self._hand_vector, suit)
+        nbr_of_actions = len(possible_actions)
+        rnn_state_tensor = np.tile(
+            self._get_relative_rnn_input(state),
+            (nbr_of_actions, 1, 1)
+        )
+        relative_table = state.blies_history[state.current_blie_index][self._table_roll_indices[:8]]
+        current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
+        aux_state_tensor = np.tile(
+            np.concatenate([self._hand_vector, relative_table, current_difference]),
+            (nbr_of_actions, 1)
+        )
+        aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
+        self._current_possible_actions = possible_actions
+        self._current_rnn_state_tensors = rnn_state_tensor
+        self._current_aux_state_action_tensors = aux_state_action_tensor
+        return rnn_state_tensor, aux_state_action_tensor
+
+    def get_action(self, q_values: np.ndarray) -> np.ndarray:
+        if np.random.binomial(1, self._strategy_exp):
+            index = np.random.randint(len(q_values))
+        else:
+            index = np.argmin(q_values)
+        self._strategy_pool.append((self._current_rnn_state_tensors[index], self._current_aux_state_action_tensors[index]))
+        action = self._current_possible_actions[index]
+        self._hand_vector[action[0] + 9 * action[1]] = 0
+        return action
+
     def play_card(self, state: GameState, suit: int) -> np.ndarray:
         possible_actions = get_possible_actions(self._hand_vector, suit)
         nbr_of_actions = len(possible_actions)
