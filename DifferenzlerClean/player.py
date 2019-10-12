@@ -109,7 +109,7 @@ class RnnPlayer(DifferenzlerPlayer):
     _hand_vector: np.ndarray
     _table_position: int
     _table_roll_indices: np.ndarray
-    _batch_size: int
+    _batch_size_strat: int
 
     total_time_spent_in_keras = datetime.timedelta()
     time_spent_training = datetime.timedelta()
@@ -121,7 +121,7 @@ class RnnPlayer(DifferenzlerPlayer):
             prediction_y_function: Callable[[int, int], Union[int, float]],
             strategy_y_function: Callable[[int, int], Union[int, float]],
             prediction_exp: float, strategy_exp: float,
-            batch_size: int
+            batch_size_strat: int
     ):
         self._prediction_model = prediction_model
         self._strategy_model = strategy_model
@@ -131,7 +131,8 @@ class RnnPlayer(DifferenzlerPlayer):
         self._strategy_exp = strategy_exp
         self._prediction_y_function = prediction_y_function
         self._strategy_y_function = strategy_y_function
-        self._batch_size = batch_size
+        self._batch_size_strat = batch_size_strat
+        self._batch_size_pred = max(1, batch_size_strat // 9)
 
     def start_round(self, hand_vector: np.ndarray, table_position: int):
         self._prediction_pool = []
@@ -157,6 +158,9 @@ class RnnPlayer(DifferenzlerPlayer):
     def form_nn_input_tensors(self, state: GameState, suit: int) -> Tuple[np.ndarray, np.ndarray]:
         possible_actions = get_possible_actions(self._hand_vector, suit)
         nbr_of_actions = len(possible_actions)
+        if np.sum(self._hand_vector) == 1:
+            self._current_possible_actions = possible_actions
+            return np.array([]), np.array([])
         rnn_state_tensor = np.tile(
             self._get_relative_rnn_input(state),
             (nbr_of_actions, 1, 1)
@@ -174,45 +178,27 @@ class RnnPlayer(DifferenzlerPlayer):
         return rnn_state_tensor, aux_state_action_tensor
 
     def get_action(self, q_values: np.ndarray) -> np.ndarray:
-        if np.random.binomial(1, self._strategy_exp):
-            index = np.random.randint(len(q_values))
+        if len(q_values) == 0:
+            action = self._current_possible_actions[0]
         else:
-            index = np.argmin(q_values)
-        self._strategy_pool.append((self._current_rnn_state_tensors[index], self._current_aux_state_action_tensors[index]))
-        action = self._current_possible_actions[index]
+            if np.random.binomial(1, self._strategy_exp):
+                index = np.random.randint(len(q_values))
+            else:
+                index = np.argmin(q_values)
+            self._strategy_pool.append((self._current_rnn_state_tensors[index], self._current_aux_state_action_tensors[index]))
+            action = self._current_possible_actions[index]
         self._hand_vector[action[0] + 9 * action[1]] = 0
         return action
 
     def play_card(self, state: GameState, suit: int) -> np.ndarray:
-        possible_actions = get_possible_actions(self._hand_vector, suit)
-        nbr_of_actions = len(possible_actions)
-        if nbr_of_actions == 1:
-            index = 0
+        rnn_state_tensor, aux_state_action_tensor = self.form_nn_input_tensors(state, suit)
+        tmp = datetime.datetime.now()
+        if len(aux_state_action_tensor) == 0:
+            q_values = []
         else:
-            rnn_state_tensor = np.tile(
-                self._get_relative_rnn_input(state),
-                (nbr_of_actions, 1, 1)
-            )
-            relative_table = state.blies_history[state.current_blie_index][self._table_roll_indices[:8]]
-            current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
-            aux_state_tensor = np.tile(
-                np.concatenate([self._hand_vector, relative_table, current_difference]),
-                (nbr_of_actions, 1)
-            )
-            aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
-
-            # get the index of the action we want to play
-            if np.random.binomial(1, self._strategy_exp):
-                index = np.random.randint(nbr_of_actions)
-            else:
-                tmp = datetime.datetime.now()
-                index = np.argmin(self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor]))
-                RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
-            self._strategy_pool.append((rnn_state_tensor[index], aux_state_action_tensor[index]))
-
-        action = possible_actions[index]
-        self._hand_vector[action[0] + 9 * action[1]] = 0
-        return action
+            q_values = self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
+        RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+        return self.get_action(q_values)
 
     def finish_round(self, prediction: int, made_points: int, train: bool) -> Tuple[float, float]:
         assert np.all(self._hand_vector == 0)
@@ -226,8 +212,8 @@ class RnnPlayer(DifferenzlerPlayer):
         self._strategy_memory.add_samples(boosted_strat_pool, self._strategy_y_function(prediction, made_points))
         if train:
             tmp = datetime.datetime.now()
-            pred_loss = self._prediction_model.train_on_batch(*self._prediction_memory.draw_batch(self._batch_size))
-            strat_loss = self._strategy_model.train_on_batch(*self._strategy_memory.draw_batch(self._batch_size))
+            pred_loss = self._prediction_model.train_on_batch(*self._prediction_memory.draw_batch(self._batch_size_pred))
+            strat_loss = self._strategy_model.train_on_batch(*self._strategy_memory.draw_batch(self._batch_size_strat))
             RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
             RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
             return pred_loss, strat_loss
