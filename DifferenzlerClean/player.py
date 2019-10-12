@@ -158,9 +158,9 @@ class RnnPlayer(DifferenzlerPlayer):
     def form_nn_input_tensors(self, state: GameState, suit: int) -> Tuple[np.ndarray, np.ndarray]:
         possible_actions = get_possible_actions(self._hand_vector, suit)
         nbr_of_actions = len(possible_actions)
-        if np.sum(self._hand_vector) == 1:
-            self._current_possible_actions = possible_actions
-            return np.array([]), np.array([])
+        # if np.sum(self._hand_vector) == 1:
+        #     self._current_possible_actions = possible_actions
+        #     return np.array([]), np.array([])
         rnn_state_tensor = np.tile(
             self._get_relative_rnn_input(state),
             (nbr_of_actions, 1, 1)
@@ -178,15 +178,15 @@ class RnnPlayer(DifferenzlerPlayer):
         return rnn_state_tensor, aux_state_action_tensor
 
     def get_action(self, q_values: np.ndarray) -> np.ndarray:
-        if len(q_values) == 0:
-            action = self._current_possible_actions[0]
+        # if len(q_values) == 0:
+        #     action = self._current_possible_actions[0]
+        # else:
+        if np.random.binomial(1, self._strategy_exp):
+            index = np.random.randint(len(q_values))
         else:
-            if np.random.binomial(1, self._strategy_exp):
-                index = np.random.randint(len(q_values))
-            else:
-                index = np.argmin(q_values)
-            self._strategy_pool.append((self._current_rnn_state_tensors[index], self._current_aux_state_action_tensors[index]))
-            action = self._current_possible_actions[index]
+            index = np.argmin(q_values)
+        self._strategy_pool.append((self._current_rnn_state_tensors[index], self._current_aux_state_action_tensors[index]))
+        action = self._current_possible_actions[index]
         self._hand_vector[action[0] + 9 * action[1]] = 0
         return action
 
