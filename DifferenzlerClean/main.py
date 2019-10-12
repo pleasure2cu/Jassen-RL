@@ -61,11 +61,11 @@ def main():
                 assert pred_memory.assert_items()
                 assert strat_memory.assert_items()
                 if i % fit_window == 0:
-                    xs_pred, ys_pred = pred_memory.draw_batch(sample_limit)
+                    xs_pred, ys_pred = pred_memory.draw_batch(sample_limit//9)
                     xs_strat, ys_strat = strat_memory.draw_batch(sample_limit)
 
                     tmp = datetime.datetime.now()
-                    pred_model.fit(xs_pred, ys_pred, batch_size=max(1, batch_size//9), verbose=0)
+                    pred_model.fit(xs_pred, ys_pred, batch_size=max(1, batch_size), verbose=0)
                     strat_model.fit(xs_strat, ys_strat, batch_size=batch_size, verbose=0)
                     RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
                     RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
