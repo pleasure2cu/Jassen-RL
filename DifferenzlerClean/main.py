@@ -15,6 +15,7 @@ epoch_size = 300
 batch_size = 192
 fit_window = 12
 parallel_rounds = 12
+sample_limit = int((fit_window * 36 * 6) / batch_size + 1) * batch_size
 
 if parallel_rounds % fit_window != 0:
     print("fit_window is not a multiple of parallel_rounds, so the system won't train.")
@@ -60,8 +61,6 @@ def main():
                 assert pred_memory.assert_items()
                 assert strat_memory.assert_items()
                 if i % fit_window == 0:
-                    sample_limit = 4 * 4 * batch_size
-
                     xs_pred, ys_pred = pred_memory.draw_batch(sample_limit)
                     xs_strat, ys_strat = strat_memory.draw_batch(sample_limit)
 
