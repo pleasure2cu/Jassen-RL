@@ -29,7 +29,7 @@ def main():
     strat_memory = RnnReplayMemory(1)
     players = [
         RnnPlayer(
-            pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1
+            pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1, 1
         )
         for pred_model, strat_model in models
     ]

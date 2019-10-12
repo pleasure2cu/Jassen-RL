@@ -158,7 +158,7 @@ class RnnPlayer(DifferenzlerPlayer):
     def form_nn_input_tensors(self, state: GameState, suit: int) -> Tuple[np.ndarray, np.ndarray]:
         possible_actions = get_possible_actions(self._hand_vector, suit)
         nbr_of_actions = len(possible_actions)
-        if np.sum(self._hand_vector) == 1:
+        if nbr_of_actions == 1:
             self._current_possible_actions = possible_actions
             return np.array([]), np.array([])
         rnn_state_tensor = np.tile(

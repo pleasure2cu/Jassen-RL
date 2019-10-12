@@ -82,7 +82,7 @@ def get_played_card(player_index: int) -> np.ndarray:
 
 
 pred_model, strat_model = load_models()
-player = RnnPlayer(pred_model, strat_model, ReplayMemory(1), RnnReplayMemory(1), sum, sum, 0.0, 0.0, 1)
+player = RnnPlayer(pred_model, strat_model, ReplayMemory(1), RnnReplayMemory(1), sum, sum, 0.0, 0.0, 1, 1)
 state = GameState()
 
 get_trump()
