@@ -83,14 +83,18 @@ class DifferenzlerSitting(Sitting):
                         self._players[int(i*4+player_index[i])].form_nn_input_tensors(states[i], int(table_suit[i]))
                         for i in range(nbr_of_parallel_rounds)
                     ]
-                    rnn_and_aux_aggregated = list(zip(*inputs))
-                    nn_input = [
-                        np.concatenate(rnn_and_aux_aggregated[0], axis=0),
-                        np.concatenate(rnn_and_aux_aggregated[1], axis=0)
-                    ]
-                    tmp = datetime.datetime.now()
-                    q_values = strategy_model.predict(nn_input).reshape(-1) if len(nn_input[1]) != 0 else []
-                    RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+                    filtered_inputs = filter(lambda x: len(x[0]), inputs)
+                    rnn_and_aux_aggregated = list(zip(*filtered_inputs))
+                    if len(rnn_and_aux_aggregated) != 0:
+                        nn_input = [
+                            np.concatenate(rnn_and_aux_aggregated[0], axis=0),
+                            np.concatenate(rnn_and_aux_aggregated[1], axis=0)
+                        ]
+                        tmp = datetime.datetime.now()
+                        q_values = strategy_model.predict(nn_input).reshape(-1) if len(nn_input[1]) != 0 else []
+                        RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+                    else:
+                        q_values = []
                     q_values_per_player = [len(aux) for rnn, aux in inputs]
                     q_offsets = [0] + [sum(q_values_per_player[:i]) for i in range(1, len(q_values_per_player) + 1)]
                     played_cards = []
