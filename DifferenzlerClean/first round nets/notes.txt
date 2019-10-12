@@ -1,0 +1,4 @@
+These are the nets produced on the weekend of the 5th Oct 2019. 
+Main concern was that the "not boosted" net performed the best among all agents.
+
+A possible explanation is that only about 12% of all samples (in the boosted case) were looked at.
