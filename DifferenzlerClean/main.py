@@ -12,7 +12,7 @@ from sitting import DifferenzlerSitting
 
 number_of_epochs = 5  # decides how many times the intermediate stats are written
 epoch_size = 300  # decides over how many rounds an intermediate stats text goes
-fit_window = 12  # after how many rounds the model is trained
+fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 batch_size_strat = 192
