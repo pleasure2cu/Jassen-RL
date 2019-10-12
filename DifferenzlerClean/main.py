@@ -14,10 +14,11 @@ number_of_epochs = 5  # decides how many times the intermediate stats are writte
 epoch_size = 300  # decides over how many rounds an intermediate stats text goes
 fit_window = 12  # after how many rounds the model is trained
 parallel_rounds = fit_window
-batch_size_strat = 128
+batch_size_strat = 192
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 sample_limit = max(1, int((fit_window * 36 * 6) * sample_coverage))
 print("Batch size for strat = {}".format(batch_size_strat))
+print("Sampel limit = {}".format(sample_limit))
 
 if fit_window % parallel_rounds != 0:
     print("fit_window is not a multiple of parallel_rounds, so the system won't train.")
