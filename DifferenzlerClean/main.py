@@ -10,15 +10,15 @@ from player import RnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 5  # decides how many times the intermediate stats are written
-epoch_size = 300  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 3  # decides how many times the intermediate stats are written
+epoch_size = 15_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 batch_size_strat = 192
 sample_limit_strat = int(6 * 32 * fit_window / batch_size_strat + 1) * batch_size_strat
-batch_size_pred = int(batch_size_strat / 9 + 1)
-sample_limit_pred = int(6 * 32 * fit_window / batch_size_pred + 1) * batch_size_pred
+batch_size_pred = int(batch_size_strat / 8 + 1)
+sample_limit_pred = int(6 * 4 * fit_window / batch_size_pred + 1) * batch_size_pred
 print("Batch size for strat = {}".format(batch_size_strat))
 print("Sample limit strategy = {}".format(sample_limit_strat))
 
@@ -28,16 +28,16 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    pred_model_funcs = [prediction_resnet]
-    strat_model_funcs = [small_strategy_network]
-    name_bases = ["small_player_2nd_edition"]
+    pred_model_funcs = ([prediction_resnet] * 3) + [prediction_l1_resnet]
+    strat_model_funcs = [normal_strategy_network, small_strategy_network, tiny_strategy_network, small_l1_strategy_network]
+    name_bases = ["normal_player", "small_player", "tiny_player", "small_l1_player"]
 
     for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
         print("\n\n\nCurrently training: {}".format(name_base))
 
         pred_memory = ReplayMemory(2_000*6)
-        strat_memory = RnnReplayMemory(18_000*6)
+        strat_memory = RnnReplayMemory(16_000*6)
 
         pred_model = pred_model_func()
         strat_model = strat_model_func()
