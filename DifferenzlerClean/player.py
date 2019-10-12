@@ -121,7 +121,7 @@ class RnnPlayer(DifferenzlerPlayer):
             prediction_y_function: Callable[[int, int], Union[int, float]],
             strategy_y_function: Callable[[int, int], Union[int, float]],
             prediction_exp: float, strategy_exp: float,
-            batch_size_strat: int
+            batch_size_pred:int, batch_size_strat: int
     ):
         self._prediction_model = prediction_model
         self._strategy_model = strategy_model
@@ -131,8 +131,8 @@ class RnnPlayer(DifferenzlerPlayer):
         self._strategy_exp = strategy_exp
         self._prediction_y_function = prediction_y_function
         self._strategy_y_function = strategy_y_function
+        self._batch_size_pred = batch_size_pred
         self._batch_size_strat = batch_size_strat
-        self._batch_size_pred = max(1, batch_size_strat // 9)
 
     def start_round(self, hand_vector: np.ndarray, table_position: int):
         self._prediction_pool = []

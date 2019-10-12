@@ -14,10 +14,13 @@ number_of_epochs = 5  # decides how many times the intermediate stats are writte
 epoch_size = 300  # decides over how many rounds an intermediate stats text goes
 fit_window = 12  # after how many rounds the model is trained
 parallel_rounds = fit_window
-batch_size_strat = 128
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
-sample_limit = max(1, int((fit_window * 36 * 6) * sample_coverage))
+batch_size_strat = 192
+sample_limit_strat = int(6 * 32 * fit_window / batch_size_strat + 1) * batch_size_strat
+batch_size_pred = int(batch_size_strat / 9 + 1)
+sample_limit_pred = int(6 * 32 * fit_window / batch_size_pred + 1) * batch_size_pred
 print("Batch size for strat = {}".format(batch_size_strat))
+print("Sample limit strategy = {}".format(sample_limit_strat))
 
 if fit_window % parallel_rounds != 0:
     print("fit_window is not a multiple of parallel_rounds, so the system won't train.")
@@ -33,8 +36,8 @@ def main():
 
         print("\n\n\nCurrently training: {}".format(name_base))
 
-        pred_memory = ReplayMemory(1_000*6)
-        strat_memory = RnnReplayMemory(9_000*6)
+        pred_memory = ReplayMemory(2_000*6)
+        strat_memory = RnnReplayMemory(18_000*6)
 
         pred_model = pred_model_func()
         strat_model = strat_model_func()
@@ -42,7 +45,7 @@ def main():
         players = [
             RnnPlayer(
                 pred_model, strat_model, pred_memory, strat_memory,
-                normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size_strat
+                normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size_pred, batch_size_strat
             )
             for _ in range(4 * parallel_rounds)
         ]
@@ -67,11 +70,11 @@ def main():
                 assert pred_memory.assert_items()
                 assert strat_memory.assert_items()
                 if i % fit_window == 0 and parallel_rounds > 1:
-                    xs_pred, ys_pred = pred_memory.draw_batch(sample_limit)
-                    xs_strat, ys_strat = strat_memory.draw_batch(sample_limit)
+                    xs_pred, ys_pred = pred_memory.draw_batch(sample_limit_pred)
+                    xs_strat, ys_strat = strat_memory.draw_batch(sample_limit_strat)
 
                     tmp = datetime.datetime.now()
-                    pred_model.fit(xs_pred, ys_pred, batch_size=batch_size_strat, verbose=0)
+                    pred_model.fit(xs_pred, ys_pred, batch_size=batch_size_pred, verbose=0)
                     strat_model.fit(xs_strat, ys_strat, batch_size=batch_size_strat, verbose=0)
                     RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
                     RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
