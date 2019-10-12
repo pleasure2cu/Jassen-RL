@@ -16,7 +16,7 @@ fit_window = 12  # after how many rounds the model is trained
 parallel_rounds = fit_window
 batch_size_strat = 192
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
-sample_limit = max(1, int((fit_window * 36 * 6) * sample_coverage))
+sample_limit = int((fit_window * 36 * 6) * sample_coverage / batch_size_strat + 1) * batch_size_strat
 print("Batch size for strat = {}".format(batch_size_strat))
 print("Sampel limit = {}".format(sample_limit))
 
