@@ -10,17 +10,13 @@ from player import RnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 5  # decides how many times the intermediate stats are written
-epoch_size = 300  # decides over how many rounds an intermediate stats text goes
-fit_window = 12  # after how many rounds the model is trained
-parallel_rounds = fit_window
-batch_size_strat = 192
-sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
-sample_limit = int((fit_window * 36 * 6) * sample_coverage / batch_size_strat + 1) * batch_size_strat
-print("Batch size for strat = {}".format(batch_size_strat))
-print("Sampel limit = {}".format(sample_limit))
+number_of_epochs = 5
+epoch_size = 300
+batch_size = 192
+fit_window = 12
+parallel_rounds = 12
 
-if fit_window % parallel_rounds != 0:
+if parallel_rounds % fit_window != 0:
     print("fit_window is not a multiple of parallel_rounds, so the system won't train.")
     exit()
 
@@ -43,9 +39,9 @@ def main():
         players = [
             RnnPlayer(
                 pred_model, strat_model, pred_memory, strat_memory,
-                normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size_strat
+                normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size
             )
-            for _ in range(4 * parallel_rounds)
+            for _ in range(4 * 12)
         ]
 
         sitting = DifferenzlerSitting()
@@ -57,29 +53,27 @@ def main():
             total_loss_s = 0.
             for i in range(0, epoch_size, parallel_rounds):
                 # print("{}".format(epoch_index*epoch_size+i), end='\r')
-                loss_p, loss_s, diffs = sitting.play_full_round(
-                    train=parallel_rounds == 1 and i % fit_window == 0,
-                    nbr_of_parallel_rounds=parallel_rounds,
-                    strategy_model=strat_model
-                )
+                loss_p, loss_s, diffs = sitting.play_full_round(train=False, nbr_of_parallel_rounds=parallel_rounds)
                 total_diff += np.sum(diffs)
                 total_loss_p += loss_p
                 total_loss_s += loss_s
                 assert pred_memory.assert_items()
                 assert strat_memory.assert_items()
-                if i % fit_window == 0 and parallel_rounds > 1:
+                if i % fit_window == 0:
+                    sample_limit = 4 * 4 * batch_size
+
                     xs_pred, ys_pred = pred_memory.draw_batch(sample_limit)
                     xs_strat, ys_strat = strat_memory.draw_batch(sample_limit)
 
                     tmp = datetime.datetime.now()
-                    pred_model.fit(xs_pred, ys_pred, batch_size=max(1, batch_size_strat//9), verbose=0)
-                    strat_model.fit(xs_strat, ys_strat, batch_size=batch_size_strat, verbose=0)
+                    pred_model.fit(xs_pred, ys_pred, batch_size=batch_size, verbose=0)
+                    strat_model.fit(xs_strat, ys_strat, batch_size=batch_size, verbose=0)
                     RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
                     RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
-            print("\ntime spent in total = {}".format(datetime.datetime.now() - epoch_start_time))
+            print(datetime.datetime.now() - epoch_start_time)
+            print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4, total_loss_p, total_loss_s))
             print("time spent in keras = {}".format(RnnPlayer.total_time_spent_in_keras))
             print("time spent training = {}".format(RnnPlayer.time_spent_training))
-            print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4, total_loss_p, total_loss_s))
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
             RnnPlayer.time_spent_training = datetime.timedelta()
 

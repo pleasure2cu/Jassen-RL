@@ -1,13 +1,10 @@
-import datetime
 import random
 from typing import Any, Tuple, List
 
-import keras
 import numpy as np
 
 from abstract_classes.player import DifferenzlerPlayer
 from abstract_classes.sitting import Sitting
-from player import RnnPlayer
 from state import GameState
 
 
@@ -59,8 +56,7 @@ class DifferenzlerSitting(Sitting):
     def set_players(self, players: List[DifferenzlerPlayer]):
         self._players = players
 
-    def play_cards(self, nbr_of_parallel_rounds: int = 1, strategy_model: keras.Model=None) -> Tuple[np.ndarray, np.ndarray]:
-        assert nbr_of_parallel_rounds == 1 or strategy_model is not None
+    def play_cards(self, nbr_of_parallel_rounds: int = 1) -> Tuple[np.ndarray, np.ndarray]:
         states = [GameState() for _ in range(nbr_of_parallel_rounds)]
         shuffle_indices = [100] * 4 * nbr_of_parallel_rounds
         for i in range(0, 4 * nbr_of_parallel_rounds, 4):
@@ -79,27 +75,25 @@ class DifferenzlerSitting(Sitting):
             table_suit = -1 * np.ones(nbr_of_parallel_rounds)
             for offset in range(4):
                 if nbr_of_parallel_rounds > 1:
-                    inputs = [
+                    inputs: List[Tuple[np.ndarray, np.ndarray]] = [
                         self._players[int(i*4+player_index[i])].form_nn_input_tensors(states[i], int(table_suit[i]))
                         for i in range(nbr_of_parallel_rounds)
-                    ]
+                    ]  # get the individual inputs to the strat network
                     rnn_and_aux_aggregated = list(zip(*inputs))
                     nn_input = [
                         np.concatenate(rnn_and_aux_aggregated[0], axis=0),
                         np.concatenate(rnn_and_aux_aggregated[1], axis=0)
                     ]
-                    tmp = datetime.datetime.now()
-                    q_values = strategy_model.predict(nn_input).reshape(-1)  # if len(nn_input[1]) != 0 else []
-                    RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
-                    q_values_per_player = [len(aux) for rnn, aux in inputs]
-                    q_offsets = [0] + [sum(q_values_per_player[:i]) for i in range(1, len(q_values_per_player) + 1)]
+                    q_values = self._players[0]._strategy_model.predict(nn_input).reshape(-1)
+                    nbr_of_q_values = [len(aux) for rnn, aux in inputs]
+                    q_values_offsets = [0] + [sum(nbr_of_q_values[:i]) for i in range(1, len(nbr_of_q_values) + 1)]
                     played_cards = []
                     for i in range(nbr_of_parallel_rounds):
                         played_cards.append(
-                            self._players[int(i*4+player_index[i])].get_action(q_values[q_offsets[i]: q_offsets[i+1]])
+                            self._players[int(i*4+player_index[i])].get_action(q_values[q_values_offsets[i]: q_values_offsets[i+1]])
                         )
                 else:
-                    played_cards = [self._players[int(player_index[0])].play_card(states[0], int(table_suit[0]))]
+                    played_cards = [self._players[int(player_index[0])].play_card(states[0], table_suit)]
 
                 for parallel_i in range(nbr_of_parallel_rounds):
                     if table_suit[parallel_i] < 0:
@@ -118,14 +112,15 @@ class DifferenzlerSitting(Sitting):
             assert np.sum(states[i].points_made) == 157
         self._players = reverse_shuffle(self._players, shuffle_indices)
         predictions = np.array([states[state_i].predictions for state_i in range(nbr_of_parallel_rounds)]).reshape(-1)
-        predictions = np.array(reverse_shuffle(predictions, shuffle_indices)).reshape((-1, 4))
+        predictions = reverse_shuffle(predictions, shuffle_indices)
+        predictions = np.array(predictions).reshape((-1, 4))
         points_made = np.array([states[state_i].points_made for state_i in range(nbr_of_parallel_rounds)]).reshape(-1)
-        points_made = np.array(reverse_shuffle(points_made, shuffle_indices)).reshape((-1, 4))
+        points_made = reverse_shuffle(points_made, shuffle_indices)
+        points_made = np.array(points_made).reshape((-1, 4))
         return predictions, points_made
 
-    def play_full_round(self, train: bool, nbr_of_parallel_rounds: int = 1, strategy_model: keras.Model = None) -> Any:
-        assert nbr_of_parallel_rounds == 1 or strategy_model is not None
-        predictions, points_made = self.play_cards(nbr_of_parallel_rounds=nbr_of_parallel_rounds, strategy_model=strategy_model)
+    def play_full_round(self, train: bool, nbr_of_parallel_rounds: int = 1) -> Any:
+        predictions, points_made = self.play_cards(nbr_of_parallel_rounds=nbr_of_parallel_rounds)
         total_pred_loss = 0.
         total_strat_loss = 0.
         for i in range(nbr_of_parallel_rounds):
