@@ -1,5 +1,5 @@
 import abc
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 
@@ -18,6 +18,14 @@ class DifferenzlerPlayer(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def play_card(self, state: GameState, suit: int) -> np.ndarray:
+        pass
+
+    @abc.abstractmethod
+    def form_nn_input_tensors(self, state: GameState, suit: int) -> Tuple[np.ndarray, np.ndarray]:
+        pass
+
+    @abc.abstractmethod
+    def get_action(self, q_values: np.ndarray) -> np.ndarray:
         pass
 
     @abc.abstractmethod

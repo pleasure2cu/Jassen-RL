@@ -41,7 +41,7 @@ def main():
     for i in range(number_of_rounds):
         preds, mades = sitting.play_cards()
         diffs = np.absolute(preds - mades)
-        total_diffs += diffs
+        total_diffs += diffs.reshape(-1)
         won_rounds[np.argmin(diffs)] += 1
         print("{}% ({} / {})".format(int(i+1 / number_of_rounds * 1000) / 10, i+1, number_of_rounds), end='\r')
     print("Average difference:", total_diffs / number_of_rounds)
