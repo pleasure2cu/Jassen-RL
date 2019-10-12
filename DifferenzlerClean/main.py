@@ -30,14 +30,14 @@ if fit_window % parallel_rounds != 0:
 def main():
     pred_model_funcs = [prediction_resnet]
     strat_model_funcs = [small_strategy_network]
-    name_bases = ["small_player_1_option"]
+    name_bases = ["small_player_not_boosted"]
 
     for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
         print("\n\n\nCurrently training: {}".format(name_base))
 
-        pred_memory = ReplayMemory(2_000*6)
-        strat_memory = RnnReplayMemory(16_000*6)
+        pred_memory = ReplayMemory(2_000)
+        strat_memory = RnnReplayMemory(16_000)
 
         pred_model = pred_model_func()
         strat_model = strat_model_func()

@@ -4,7 +4,8 @@ from typing import List, Tuple
 import keras
 import numpy as np
 
-from main_helper_methods import normal_pred_y_func, normal_strat_y_func
+from main_helper_methods import normal_pred_y_func, normal_strat_y_func, prediction_resnet, normal_strategy_network, \
+    small_strategy_network, tiny_strategy_network
 from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer
 from sitting import DifferenzlerSitting
@@ -18,7 +19,14 @@ def load_all_models() -> List[Tuple[keras.Model, keras.Model]]:
     if not len(net_names) in [2, 4, 8]:
         print("This number of nets is not admissible")
         exit()
-    nets = [keras.models.load_model(net_name) for net_name in net_names]
+    nets = [
+        prediction_resnet(),
+        small_strategy_network(),
+        prediction_resnet(),
+        small_strategy_network()
+    ]
+    for i in range(4):
+        nets[i].load_weights(sys.argv[i+1])
     nets *= 8 // len(net_names)
     return [(nets[i], nets[i + 1]) for i in range(0, len(nets), 2)]
 
