@@ -127,14 +127,17 @@ class DifferenzlerSitting(Sitting):
         points_made = np.array(reverse_shuffle(points_made, shuffle_indices)).reshape((-1, 4))
         return predictions, points_made
 
-    def play_full_round(self, train: bool, nbr_of_parallel_rounds: int = 1, strategy_model: keras.Model = None) -> Any:
+    def play_full_round(
+            self, train: bool, nbr_of_parallel_rounds: int=1, strategy_model: keras.Model=None, discount: float=0.0
+    ) -> Any:
         assert nbr_of_parallel_rounds == 1 or strategy_model is not None
         predictions, points_made = self.play_cards(nbr_of_parallel_rounds=nbr_of_parallel_rounds, strategy_model=strategy_model)
         total_pred_loss = 0.
         total_strat_loss = 0.
         for i in range(nbr_of_parallel_rounds):
+            winner = self._players[i*4: (i+1)*4][int(np.argmin(np.absolute(predictions[i] - points_made[i])))]
             for prediction, made, player in zip(predictions[i], points_made[i], self._players[i*4: (i+1)*4]):
-                p_loss, s_loss = player.finish_round(prediction, made, train)
+                p_loss, s_loss = player.finish_round(prediction, made, train, discount=0.0 if player != winner else discount)
                 total_pred_loss += p_loss
                 total_strat_loss += s_loss
         diffs = np.sum(np.absolute(predictions - points_made), axis=0)

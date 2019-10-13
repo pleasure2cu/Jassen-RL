@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Tuple
+from typing import Any, Tuple, Union
 
 import numpy as np
 
@@ -29,5 +29,6 @@ class DifferenzlerPlayer(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def finish_round(self, prediction: int, made_points: int, train: bool) -> Any:  # returns statistics
+    def finish_round(self, prediction: int, made_points: int, train: bool, discount: Union[int, float]=0.0) -> Any:
+        # returns statistics
         pass
