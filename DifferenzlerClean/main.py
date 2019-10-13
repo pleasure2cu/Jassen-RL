@@ -10,8 +10,8 @@ from player import RnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 3  # decides how many times the intermediate stats are written
-epoch_size = 15_000  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 6  # decides how many times the intermediate stats are written
+epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
@@ -28,10 +28,10 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount in [i * 8 for i in range(1, 6)]:
+    for discount in [0, 16, 32]:
         pred_model_funcs = [prediction_resnet]
-        strat_model_funcs = [small_strategy_network]
-        name_bases = ["small_player_{}_discount".format(discount)]
+        strat_model_funcs = [normal_strategy_network]
+        name_bases = ["normal_player_{}_discount".format(discount)]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
