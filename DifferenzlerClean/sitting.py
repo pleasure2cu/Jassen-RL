@@ -135,9 +135,13 @@ class DifferenzlerSitting(Sitting):
         total_pred_loss = 0.
         total_strat_loss = 0.
         for i in range(nbr_of_parallel_rounds):
-            winner = self._players[i*4: (i+1)*4][int(np.argmin(np.absolute(predictions[i] - points_made[i])))]
+            diffs = np.absolute(predictions[i] - points_made[i])
+            indices_of_winners = np.where(diffs == np.min(diffs))[0]
+            winners = [self._players[i*4+index] for index in indices_of_winners]
             for prediction, made, player in zip(predictions[i], points_made[i], self._players[i*4: (i+1)*4]):
-                p_loss, s_loss = player.finish_round(prediction, made, train, discount=0.0 if player != winner else discount)
+                p_loss, s_loss = player.finish_round(
+                    prediction, made, train, discount=discount / len(winners) if player in winners else 0.0
+                )
                 total_pred_loss += p_loss
                 total_strat_loss += s_loss
         diffs = np.sum(np.absolute(predictions - points_made), axis=0)
