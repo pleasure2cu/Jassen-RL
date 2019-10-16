@@ -228,19 +228,32 @@ class RnnPlayer(DifferenzlerPlayer):
         return history_rolled
 
 
+def get_gone_cards(state: GameState) -> np.ndarray:
+    gone_cards = np.zeros(36)
+    for blie in state.blies_history[:state.current_blie_index+1]:
+        cards = blie[:8].reshape((4, 2))
+        for card in cards:
+            if card[0] < 0:
+                continue
+            gone_cards[int(card[0]+card[1]*9)] = 1
+    return gone_cards
+
+
 class StreunRnnPlayer(DifferenzlerPlayer):
 
     # note: this player is purely to be able to compare earlier work with current work. So it will only ever
     # be run in agent_arena and not be used to train anything
 
-    _pred_model: keras.Model
+    _prediction_model: keras.Model
+    _strategy_model: keras.Model
 
     _hand_vector: np.ndarray
     _table_position: int
     _table_roll_indices: np.ndarray
 
-    def __init__(self):
-        pass
+    def __init__(self, prediction_model: keras.Model, strategy_model: keras.Model):
+        self._prediction_model = prediction_model
+        self._strategy_model = strategy_model
 
     def start_round(self, hand_vector: np.ndarray, table_position: int):
         self._hand_vector = hand_vector
@@ -251,11 +264,16 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         model_input = np.concatenate([
             self._hand_vector,
             np.array([self._table_position])
-        ])
-        return int(self._pred_model.predict(model_input).reshape(-1)[0] + 0.5)
+        ]).reshape((1, -1))
+        return int(self._prediction_model.predict(model_input).reshape(-1)[0] + 0.5)
 
     def play_card(self, state: GameState, suit: int) -> np.ndarray:
-        pass
+        rnn_state_tensor, aux_state_action_tensor = self.form_nn_input_tensors(state, suit)
+        if len(aux_state_action_tensor) == 0:
+            q_values = []
+        else:
+            q_values = self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
+        return self.get_action(q_values)
 
     _current_possible_actions: np.ndarray
     _current_rnn_state_tensors: np.ndarray
@@ -274,7 +292,7 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         table = state.blies_history[state.current_blie_index][:8]
         current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
         aux_state_tensor = np.tile(
-            np.concatenate([self._hand_vector, table, current_difference]),
+            np.concatenate([self._hand_vector, table, get_gone_cards(state), current_difference]),
             (nbr_of_actions, 1)
         )
         aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
@@ -283,14 +301,20 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         self._current_aux_state_action_tensors = aux_state_action_tensor
         return rnn_state_tensor, aux_state_action_tensor
 
+    def get_action(self, q_values: np.ndarray) -> np.ndarray:
+        if len(q_values) == 0:
+            action = self._current_possible_actions[0]
+        else:
+            index = np.argmin(q_values)
+            action = self._current_possible_actions[index]
+        self._hand_vector[action[0] + 9 * action[1]] = 0
+        return action
+
+    def finish_round(self, prediction: int, made_points: int, train: bool, discount: Union[int, float] = 0.0) -> Any:
+        pass
+
     def _get_relative_rnn_input(self, state: GameState) -> np.ndarray:
         history_absolute = state.blies_history[:state.current_blie_index + 1]
         history_rolled = history_absolute[:, self._table_roll_indices]
         history_rolled[:, -1] = (history_rolled[:, -1] - self._table_position) % 4
         return history_rolled
-
-    def get_action(self, q_values: np.ndarray) -> np.ndarray:
-        pass
-
-    def finish_round(self, prediction: int, made_points: int, train: bool, discount: Union[int, float] = 0.0) -> Any:
-        pass

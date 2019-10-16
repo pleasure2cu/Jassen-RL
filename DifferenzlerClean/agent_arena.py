@@ -4,14 +4,15 @@ from typing import List, Tuple
 import keras
 import numpy as np
 
+from abstract_classes.player import DifferenzlerPlayer
 from main_helper_methods import normal_pred_y_func, normal_strat_y_func, prediction_resnet, normal_strategy_network, \
     small_strategy_network, tiny_strategy_network
 from memory import ReplayMemory, RnnReplayMemory
-from player import RnnPlayer
+from player import RnnPlayer, StreunRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_rounds = 10_000
+number_of_rounds = 50
 
 
 def get_net(name: str) -> keras.Model:
@@ -34,51 +35,52 @@ def load_all_models(net_names: List[str]) -> List[Tuple[keras.Model, keras.Model
     return [(nets[i], nets[i + 1]) for i in range(0, len(nets), 2)]
 
 
+def load_models_with_streun(net_names: List[str]) -> List[Tuple[keras.Model, keras.Model]]:
+    nets = [get_net(net_name) for net_name in net_names]
+    for i in range(2):
+        nets[i].load_weights(net_names[i])
+    nets.append(keras.models.load_model("./normal_prediction_2000000.h5"))
+    nets.append(keras.models.load_model("./normal_strategy_2000000.h5"))
+    nets *= 8 // len(net_names)
+    return [(nets[i], nets[i + 1]) for i in range(0, len(nets), 2)]
+
+
 sys_inputs = [
     [
-        "second round nets/pred_normal_player_45000.h5", "second round nets/strat_normal_player_45000.h5",
-        "second round nets/pred_small_player_45000.h5", "second round nets/strat_small_player_45000.h5",
-    ],
-    [
-        "second round nets/pred_normal_player_45000.h5", "second round nets/strat_normal_player_45000.h5",
-        "second round nets/pred_tiny_player_45000.h5", "second round nets/strat_tiny_player_45000.h5",
-    ],
-    [
-        "second round nets/pred_small_player_45000.h5", "second round nets/strat_small_player_45000.h5",
-        "second round nets/pred_tiny_player_45000.h5", "second round nets/strat_tiny_player_45000.h5",
-    ],
-    [
-        "second round nets/pred_small_player_not_boosted_45000.h5", "second round nets/strat_small_player_not_boosted_45000.h5",
-        "second round nets/pred_small_player_45000.h5", "second round nets/strat_small_player_45000.h5",
-    ],
-    [
-        "pred_normal_player_0_discount_150000.h5", "strat_normal_player_0_discount_150000.h5",
-        "pred_normal_player_16_discount_150000.h5", "strat_normal_player_16_discount_150000.h5"
-    ],
-    [
-        "pred_normal_player_0_discount_150000.h5", "strat_normal_player_0_discount_150000.h5",
-        "pred_normal_player_32_discount_150000.h5", "strat_normal_player_32_discount_150000.h5"
-    ],
-    [
-        "pred_normal_player_16_discount_150000.h5", "strat_normal_player_16_discount_150000.h5",
-        "pred_normal_player_32_discount_150000.h5", "strat_normal_player_32_discount_150000.h5",
-    ],
+        "pred_normal_player_32_discount_750000.h5", "strat_normal_player_32_discount_750000.h5",
+    ]
 ]
 
 
 def main():
+    use_streun = '-streun' in sys.argv
     for sys_input in sys_inputs:
         for i in sys_input:
             print(i)
-        models = load_all_models(sys_input)
+        if use_streun:
+            print("streun_pred")
+            print("streun_strat")
+        models = load_models_with_streun(sys_input) if use_streun else load_all_models(sys_input)
         pred_memory = ReplayMemory(1)
         strat_memory = RnnReplayMemory(1)
-        players = [
-            RnnPlayer(
-                pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1, 1
-            )
-            for pred_model, strat_model in models
-        ]
+        players: List[DifferenzlerPlayer] = []
+        if use_streun:
+            players = [
+                RnnPlayer(
+                    pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0,
+                    0.0, 1, 1
+                )
+                for pred_model, strat_model in models
+            ]
+            players[1] = StreunRnnPlayer(*models[1])
+            players[3] = StreunRnnPlayer(*models[1])
+        else:
+            players = [
+                RnnPlayer(
+                    pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1, 1
+                )
+                for pred_model, strat_model in models
+            ]
 
         sitting = DifferenzlerSitting()
         sitting.set_players(players)
