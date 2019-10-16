@@ -291,8 +291,10 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         )
         table = state.blies_history[state.current_blie_index][:8]
         current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
+        abs_position_vector = np.zeros(4)
+        abs_position_vector[self._table_position] = 1
         aux_state_tensor = np.tile(
-            np.concatenate([self._hand_vector, table, get_gone_cards(state), current_difference]),
+            np.concatenate([abs_position_vector, self._hand_vector, table, get_gone_cards(state), current_difference]),
             (nbr_of_actions, 1)
         )
         aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
