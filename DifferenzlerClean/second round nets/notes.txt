@@ -1,0 +1,2 @@
+To train these nets more samples were looked at (a lot more). This iteration was to find out, whether a) it is really the case that the "not boosted" is better than the boosted (which
+isn't the case) and b) if it is beneficial to leave out all samples where the net had only one decision to take.

@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Tuple, Callable, Union
+from typing import List, Tuple, Callable, Union, Any
 
 import keras
 import numpy as np
@@ -226,3 +226,71 @@ class RnnPlayer(DifferenzlerPlayer):
         history_rolled = history_absolute[:, self._table_roll_indices]
         history_rolled[:, -1] = (history_rolled[:, -1] - self._table_position) % 4
         return history_rolled
+
+
+class StreunRnnPlayer(DifferenzlerPlayer):
+
+    # note: this player is purely to be able to compare earlier work with current work. So it will only ever
+    # be run in agent_arena and not be used to train anything
+
+    _pred_model: keras.Model
+
+    _hand_vector: np.ndarray
+    _table_position: int
+    _table_roll_indices: np.ndarray
+
+    def __init__(self):
+        pass
+
+    def start_round(self, hand_vector: np.ndarray, table_position: int):
+        self._hand_vector = hand_vector
+        self._table_position = table_position
+        self._table_roll_indices = np.concatenate([np.roll(np.arange(8), -table_position * 2), [8]])
+
+    def make_prediction(self) -> int:
+        model_input = np.concatenate([
+            self._hand_vector,
+            np.array([self._table_position])
+        ])
+        return int(self._pred_model.predict(model_input).reshape(-1)[0] + 0.5)
+
+    def play_card(self, state: GameState, suit: int) -> np.ndarray:
+        pass
+
+    _current_possible_actions: np.ndarray
+    _current_rnn_state_tensors: np.ndarray
+    _current_aux_state_action_tensors: np.ndarray
+
+    def form_nn_input_tensors(self, state: GameState, suit: int) -> Tuple[np.ndarray, np.ndarray]:
+        possible_actions = get_possible_actions(self._hand_vector, suit)
+        nbr_of_actions = len(possible_actions)
+        if np.sum(self._hand_vector) == 1:
+            self._current_possible_actions = possible_actions
+            return np.array([]), np.array([])
+        rnn_state_tensor = np.tile(
+            self._get_relative_rnn_input(state),
+            (nbr_of_actions, 1, 1)
+        )
+        table = state.blies_history[state.current_blie_index][:8]
+        current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
+        aux_state_tensor = np.tile(
+            np.concatenate([self._hand_vector, table, current_difference]),
+            (nbr_of_actions, 1)
+        )
+        aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
+        self._current_possible_actions = possible_actions
+        self._current_rnn_state_tensors = rnn_state_tensor
+        self._current_aux_state_action_tensors = aux_state_action_tensor
+        return rnn_state_tensor, aux_state_action_tensor
+
+    def _get_relative_rnn_input(self, state: GameState) -> np.ndarray:
+        history_absolute = state.blies_history[:state.current_blie_index + 1]
+        history_rolled = history_absolute[:, self._table_roll_indices]
+        history_rolled[:, -1] = (history_rolled[:, -1] - self._table_position) % 4
+        return history_rolled
+
+    def get_action(self, q_values: np.ndarray) -> np.ndarray:
+        pass
+
+    def finish_round(self, prediction: int, made_points: int, train: bool, discount: Union[int, float] = 0.0) -> Any:
+        pass
