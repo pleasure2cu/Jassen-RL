@@ -28,10 +28,10 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount in [0]:
+    for discount in [0, 32]:
         pred_model_funcs = [prediction_resnet]
         strat_model_funcs = [hand_crafted_features_rnn_network]
-        name_bases = ["hand_craft_normal_player"]
+        name_bases = ["hand_craft_{}_discount_normal_player".format(discount)]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
