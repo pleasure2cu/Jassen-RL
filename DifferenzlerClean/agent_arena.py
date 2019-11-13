@@ -97,7 +97,7 @@ def main():
         avg_diffs = total_diffs / number_of_rounds
         diffs_per_agent_type = [(avg_diffs[0] + avg_diffs[2])/2, (avg_diffs[1] + avg_diffs[3])/2]
         wins_per_agent_type = [won_rounds[0] + won_rounds[2], won_rounds[1] + won_rounds[3]]
-        wa = (max(wins_per_agent_type) / number_of_rounds * 100 - 50) * 2
+        wa = (wins_per_agent_type[0] / number_of_rounds * 100 - 50) * 2
         print("Average difference:", avg_diffs)
         print("Won rounds:", won_rounds)
         print("avg. diffs: {0:.2f} vs {1:.2f}".format(diffs_per_agent_type[0], diffs_per_agent_type[1]))

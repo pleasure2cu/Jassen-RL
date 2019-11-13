@@ -5,7 +5,9 @@ import keras
 import numpy as np
 
 from abstract_classes.player import DifferenzlerPlayer
+from helpers import which_are_bock
 from memory import ReplayMemory, RnnReplayMemory
+from sample_boosting import boost_basic_prediction_vector, boost_hand_crafted_strategy_vector
 from state import GameState
 
 
@@ -49,41 +51,7 @@ swaps = [
 ]
 
 
-def boost_color_pred_sample(model_input: np.ndarray) -> List[np.ndarray]:
-    assert len(model_input.shape) == 1
-    input_matrix = np.tile(model_input, (6, 1))
-    suit_snippets = [model_input[i * 9: (i + 1) * 9] for i in range(4)]
-    for row_index, swap in enumerate(swaps[1:], 1):
-        matrix_row = input_matrix[row_index]
-        for i, snippet_index in enumerate(swap[1: -1], 1):
-            matrix_row[i * 9: (i + 1) * 9] = suit_snippets[snippet_index]
-    return list(input_matrix)
-
-
-def boost_color_strat_sample(rnn_input: np.ndarray, aux_input: np.ndarray) -> List[Tuple[np.ndarray, np.ndarray]]:
-    """ rnn_input is 2D and aux_input 1D, so this is the x of one training sample"""
-    # rnn part
-    rnn_cube = np.tile(rnn_input, (6, 1, 1))
-    for cube_index, swap in enumerate(swaps[1:], 1):
-        for blie in rnn_cube[cube_index]:
-            for i in range(1, 8, 2):
-                blie[i] = swap[int(blie[i])]
-
-    # aux part
-    aux_matrix = np.tile(aux_input, (6, 1))
-    suit_snippets = [aux_input[i*9: (i+1)*9] for i in range(4)]
-    for row_index, swap in enumerate(swaps[1:], 1):
-        matrix_row = aux_matrix[row_index]
-        for i, snippet_index in enumerate(swap[1: -1], 1):
-            matrix_row[i*9: (i+1)*9] = suit_snippets[snippet_index]
-        matrix_row[36:44] = rnn_cube[row_index][-1][:8]
-        matrix_row[-1] = swap[int(matrix_row[-1])]
-    return [(rnn_cube[i], aux_matrix[i]) for i in range(6)]
-
-
 class RnnPlayer(DifferenzlerPlayer):
-
-    # TODO: write down what the input looks like
 
     # the RNN expects a 2D matrix (time series, 9), where the current table is also included in the time series.
     #   the 9 consists of first 4 cards in two-numbers-representation (-1 if not given) followed by the index of the
@@ -206,11 +174,11 @@ class RnnPlayer(DifferenzlerPlayer):
         assert np.all(self._hand_vector == 0)
         boosted_pred_pool = []
         for sample in self._prediction_pool:
-            boosted_pred_pool += boost_color_pred_sample(sample.reshape(-1))
+            boosted_pred_pool += self.boost_color_pred_sample(sample.reshape(-1))
         self._prediction_memory.add_samples(boosted_pred_pool, self._prediction_y_function(made_points))
         boosted_strat_pool = []
         for rnn_input, aux_input in self._strategy_pool:
-            boosted_strat_pool += boost_color_strat_sample(rnn_input, aux_input)
+            boosted_strat_pool += self.boost_color_strat_sample(rnn_input, aux_input)
         self._strategy_memory.add_samples(boosted_strat_pool, self._strategy_y_function(prediction, made_points)-discount)
         if train:
             tmp = datetime.datetime.now()
@@ -221,22 +189,41 @@ class RnnPlayer(DifferenzlerPlayer):
             return pred_loss, strat_loss
         return 0.0, 0.0
 
+    def boost_color_pred_sample(self, model_input: np.ndarray) -> List[np.ndarray]:
+        assert len(model_input.shape) == 1
+        input_matrix = np.tile(model_input, (6, 1))
+        suit_snippets = [model_input[i * 9: (i + 1) * 9] for i in range(4)]
+        for row_index, swap in enumerate(swaps[1:], 1):
+            matrix_row = input_matrix[row_index]
+            for i, snippet_index in enumerate(swap[1: -1], 1):
+                matrix_row[i * 9: (i + 1) * 9] = suit_snippets[snippet_index]
+        return list(input_matrix)
+
+    def boost_color_strat_sample(self, rnn_input: np.ndarray, aux_input: np.ndarray) -> List[Tuple[np.ndarray, np.ndarray]]:
+        """ rnn_input is 2D and aux_input 1D, so this is the x of one training sample"""
+        # rnn part
+        rnn_cube = np.tile(rnn_input, (6, 1, 1))
+        for cube_index, swap in enumerate(swaps[1:], 1):
+            for blie in rnn_cube[cube_index]:
+                for i in range(1, 8, 2):
+                    blie[i] = swap[int(blie[i])]
+
+        # aux part
+        aux_matrix = np.tile(aux_input, (6, 1))
+        suit_snippets = [aux_input[i * 9: (i + 1) * 9] for i in range(4)]
+        for row_index, swap in enumerate(swaps[1:], 1):
+            matrix_row = aux_matrix[row_index]
+            for i, snippet_index in enumerate(swap[1: -1], 1):
+                matrix_row[i * 9: (i + 1) * 9] = suit_snippets[snippet_index]
+            matrix_row[36:44] = rnn_cube[row_index][-1][:8]
+            matrix_row[-1] = swap[int(matrix_row[-1])]
+        return [(rnn_cube[i], aux_matrix[i]) for i in range(6)]
+
     def _get_relative_rnn_input(self, state: GameState) -> np.ndarray:
         history_absolute = state.blies_history[:state.current_blie_index + 1]
         history_rolled = history_absolute[:, self._table_roll_indices]
         history_rolled[:, -1] = (history_rolled[:, -1] - self._table_position) % 4
         return history_rolled
-
-
-def get_gone_cards(state: GameState) -> np.ndarray:
-    gone_cards = np.zeros(36)
-    for blie in state.blies_history[:state.current_blie_index+1]:
-        cards = blie[:8].reshape((4, 2))
-        for card in cards:
-            if card[0] < 0:
-                continue
-            gone_cards[int(card[0]+card[1]*9)] = 1
-    return gone_cards
 
 
 class StreunRnnPlayer(DifferenzlerPlayer):
@@ -294,7 +281,7 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         abs_position_vector = np.zeros(4)
         abs_position_vector[self._table_position] = 1
         aux_state_tensor = np.tile(
-            np.concatenate([abs_position_vector, self._hand_vector, table, get_gone_cards(state), current_difference]),
+            np.concatenate([abs_position_vector, self._hand_vector, table, state.gone_cards, current_difference]),
             (nbr_of_actions, 1)
         )
         aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
@@ -320,3 +307,46 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         history_rolled = history_absolute[:, self._table_roll_indices]
         history_rolled[:, -1] = (history_rolled[:, -1] - self._table_position) % 4
         return history_rolled
+
+
+class HandCraftEverywhereRnnPlayer(RnnPlayer):
+
+    _small_roll_array: np.ndarray  # has 4 entries
+
+    def start_round(self, hand_vector: np.ndarray, table_position: int):
+        super().start_round(hand_vector, table_position)
+        self._small_roll_array = np.roll(np.arange(4), -table_position)
+
+    def form_nn_input_tensors(self, state: GameState, suit: int) -> Tuple[np.ndarray, np.ndarray]:
+        possible_actions = get_possible_actions(self._hand_vector, suit)
+        nbr_of_actions = len(possible_actions)
+        if np.sum(self._hand_vector) == 1:
+            self._current_possible_actions = possible_actions
+            return np.array([]), np.array([])
+        rnn_state_tensor = np.tile(
+            self._get_relative_rnn_input(state),
+            (nbr_of_actions, 1, 1)
+        )
+        relative_table = state.blies_history[state.current_blie_index][self._table_roll_indices[:8]]
+        current_difference = [state.predictions[self._table_position] - state.points_made[self._table_position]]
+        gone_cards = state.gone_cards
+        bocks = which_are_bock(gone_cards, self._hand_vector)
+        could_follow = state.get_could_follow_vector(self._small_roll_array)
+        points_currently_on_table = np.array([state.get_points_on_table()])
+        points_per_player = state.points_made[self._small_roll_array]
+        aux_state_tensor = np.tile(
+            np.concatenate([self._hand_vector, relative_table, current_difference, gone_cards, bocks, could_follow,
+                            points_currently_on_table, points_per_player]),
+            (nbr_of_actions, 1)
+        )
+        aux_state_action_tensor = np.concatenate([aux_state_tensor, possible_actions], axis=1)
+        self._current_possible_actions = possible_actions
+        self._current_rnn_state_tensors = rnn_state_tensor
+        self._current_aux_state_action_tensors = aux_state_action_tensor
+        return rnn_state_tensor, aux_state_action_tensor
+
+    def boost_color_pred_sample(self, vector: np.ndarray) -> List[np.ndarray]:
+        return list(boost_basic_prediction_vector(vector))
+
+    def boost_color_strat_sample(self, rnn_part: np.ndarray, aux_part: np.ndarray) -> List[Tuple[np.ndarray, np.ndarray]]:
+        return list(boost_hand_crafted_strategy_vector(rnn_part, aux_part))

@@ -4,9 +4,9 @@ from typing import Tuple
 import keras
 import numpy as np
 
+from helpers import get_winning_card_index, get_points_from_table
 from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer
-from sitting import get_winning_card_index, get_points_from_table
 from state import GameState
 
 rank_strings = ['a', 'k', 'd', 'j', 'z', '9', '8', '7', '6']

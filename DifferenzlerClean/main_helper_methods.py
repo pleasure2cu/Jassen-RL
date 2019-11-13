@@ -184,3 +184,24 @@ def small_rnn_strategy_network():
 
 def small_l1_strategy_network():
     return strategy_deep_lstm_resnet(70, 140, keras.losses.mean_absolute_error)
+
+
+def hand_crafted_features_rnn_network(use_batch_norm=False) -> keras.Model:
+    rnn_output_size = 70
+    rnn_in, rnn_out = _deep_simple_rnn(rnn_output_size)
+    # inputs for aux
+    aux_input = Input(
+        (140,),
+        name="36_hand_cards_8_relative_table_1_current_diff_36_gone_cards_36_bocks_16_could_follow_1_points_on_table_4_made_points_2_action"
+    )
+    # putting together the rest of the network
+    feed_forward_input = keras.layers.concatenate([
+        rnn_out, aux_input
+    ])
+    scale_down = Dense(130)(feed_forward_input)
+    first_block = resnet_block(scale_down, 130, use_batch_norm)
+    scnd_block = resnet_block(first_block, 130, use_batch_norm)
+    out = Dense(1)(scnd_block)
+    model = Model(inputs=[rnn_in, aux_input], outputs=out)
+    model.compile(optimizer='rmsprop', loss='mse')
+    return model
