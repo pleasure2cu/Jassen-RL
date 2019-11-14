@@ -186,7 +186,7 @@ def small_l1_strategy_network():
     return strategy_deep_lstm_resnet(70, 140, keras.losses.mean_absolute_error)
 
 
-def hand_crafted_features_rnn_network(use_batch_norm=False) -> keras.Model:
+def hand_crafted_features_rnn_network(use_batch_norm=True) -> keras.Model:
     rnn_output_size = 70
     rnn_in, rnn_out = _deep_simple_rnn(rnn_output_size)
     # inputs for aux
@@ -198,7 +198,7 @@ def hand_crafted_features_rnn_network(use_batch_norm=False) -> keras.Model:
     feed_forward_input = keras.layers.concatenate([
         rnn_out, aux_input
     ])
-    scale_down = Dense(130)(feed_forward_input)
+    scale_down = Dense(130, activation='relu')(feed_forward_input)
     first_block = resnet_block(scale_down, 130, use_batch_norm)
     scnd_block = resnet_block(first_block, 130, use_batch_norm)
     out = Dense(1)(scnd_block)
