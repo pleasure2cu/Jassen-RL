@@ -186,7 +186,7 @@ def small_l1_strategy_network():
     return strategy_deep_lstm_resnet(70, 140, keras.losses.mean_absolute_error)
 
 
-def hand_crafted_features_rnn_network(use_batch_norm=True) -> keras.Model:
+def hand_crafted_features_rnn_network() -> keras.Model:
     rnn_output_size = 70
     rnn_in, rnn_out = _deep_simple_rnn(rnn_output_size)
     # inputs for aux
@@ -199,9 +199,30 @@ def hand_crafted_features_rnn_network(use_batch_norm=True) -> keras.Model:
         rnn_out, aux_input
     ])
     scale_down = Dense(130, activation='relu')(feed_forward_input)
-    first_block = resnet_block(scale_down, 130, use_batch_norm)
-    scnd_block = resnet_block(first_block, 130, use_batch_norm)
+    first_block = resnet_block(scale_down, 130, True)
+    scnd_block = resnet_block(first_block, 130, True)
     out = Dense(1)(scnd_block)
+    model = Model(inputs=[rnn_in, aux_input], outputs=out)
+    model.compile(optimizer='rmsprop', loss='mse')
+    return model
+
+
+def hand_crafted_features_rnn_network_wider() -> keras.Model:
+    """ the above model performs not so well. According to the internet, it is rather rare that more than one
+    hidden layer benefits the problem solving that much. In that spirit, this network decreases the depth (was 6)
+    in favour of width """
+    rnn_output_size = 10
+    rnn_in, rnn_out = _deep_simple_rnn(rnn_output_size)
+    aux_input = Input(
+        (140,),
+        name="36_hand_cards_8_relative_table_1_current_diff_36_gone_cards_36_bocks_16_could_follow_1_points_on_table_4_made_points_2_action"
+    )
+    feed_forward_input = keras.layers.concatenate([
+        rnn_out, aux_input
+    ])
+    first_dense_out = Dense(300, activation='relu')(feed_forward_input)
+    scnd_dense_out = Dense(300, activation='relu')(first_dense_out)
+    out = Dense(1)(scnd_dense_out)
     model = Model(inputs=[rnn_in, aux_input], outputs=out)
     model.compile(optimizer='rmsprop', loss='mse')
     return model
