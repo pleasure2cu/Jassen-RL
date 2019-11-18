@@ -220,9 +220,11 @@ def hand_crafted_features_rnn_network_wider() -> keras.Model:
     feed_forward_input = keras.layers.concatenate([
         rnn_out, aux_input
     ])
-    first_dense_out = Dense(300, activation='relu')(feed_forward_input)
-    scnd_dense_out = Dense(300, activation='relu')(first_dense_out)
-    out = Dense(1)(scnd_dense_out)
+    current_layer = Dense(220, activation='relu')(feed_forward_input)
+    current_layer = Dense(200, activation='relu')(current_layer)
+    current_layer = Dense(180, activation='relu')(current_layer)
+    current_layer = Dense(140, activation='relu')(current_layer)
+    out = Dense(1)(current_layer)
     model = Model(inputs=[rnn_in, aux_input], outputs=out)
     model.compile(optimizer='rmsprop', loss='mse')
     return model
