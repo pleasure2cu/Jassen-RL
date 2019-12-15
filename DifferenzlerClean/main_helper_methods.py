@@ -79,10 +79,6 @@ def prediction_resnet(loss='mse'):
     return model
 
 
-def prediction_l1_resnet():
-    return prediction_resnet(keras.losses.mean_absolute_error)
-
-
 def strategy_rnn_resnet(use_batch_norm: bool):
     dense_output_size = 270
     rnn_output_size = 32
@@ -188,7 +184,7 @@ def small_l1_strategy_network():
 
 def hand_crafted_features_rnn_network() -> keras.Model:
     rnn_output_size = 70
-    rnn_in, rnn_out = _deep_simple_rnn(rnn_output_size)
+    rnn_in, rnn_out = _deep_lstm2(rnn_output_size)
     # inputs for aux
     aux_input = Input(
         (140,),

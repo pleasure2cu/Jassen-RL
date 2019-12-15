@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 
 from main_helper_methods import prediction_resnet, strategy_deep_lstm_resnet, normal_pred_y_func, normal_strat_y_func, \
-    prediction_l1_resnet, normal_strategy_network, small_strategy_network, tiny_strategy_network, \
+    normal_strategy_network, small_strategy_network, tiny_strategy_network, \
     small_rnn_strategy_network, small_l1_strategy_network, hand_crafted_features_rnn_network, \
     hand_crafted_features_rnn_network_wider
 from memory import ReplayMemory, RnnReplayMemory
@@ -11,8 +11,8 @@ from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 10  # decides how many times the intermediate stats are written
-epoch_size = 20_000  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 4  # decides how many times the intermediate stats are written
+epoch_size = 15_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
@@ -30,9 +30,9 @@ if fit_window % parallel_rounds != 0:
 
 def main():
     for discount in [0, 32]:
-        pred_model_funcs = [prediction_resnet]
-        strat_model_funcs = [hand_crafted_features_rnn_network_wider]
-        name_bases = ["hand_craft_{}_discount_wider_player".format(discount)]
+        pred_model_funcs = [prediction_resnet, prediction_resnet]
+        strat_model_funcs = [hand_crafted_features_rnn_network, hand_crafted_features_rnn_network_wider]
+        name_bases = ["hand_craft_{}_discount_player".format(discount), "hand_craft_{}_discount_player_wider".format(discount)]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
