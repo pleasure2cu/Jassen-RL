@@ -1,7 +1,7 @@
 import keras
 import numpy as np
 from keras import Input, Model
-from keras.layers import LSTM, Dense, Activation, BatchNormalization, SimpleRNN, CuDNNLSTM
+from keras.layers import LSTM, Dense, Activation, BatchNormalization, SimpleRNN, CuDNNLSTM, Bidirectional
 from keras import backend as K
 
 
@@ -109,12 +109,16 @@ def _deep_lstm():
     return inp, lstm2
 
 
-def _deep_lstm2(lstm_size=100):
+def _deep_lstm2(lstm_size=100, bidirectional=False):
     inp = Input(shape=(None, 9))
     lstm_f = LSTM if len(K.tensorflow_backend._get_available_gpus()) == 0 else CuDNNLSTM
-    lstm1 = lstm_f(lstm_size, return_sequences=True)(inp)
-    lstm2 = lstm_f(lstm_size, return_sequences=True)(lstm1)
-    lstm3 = lstm_f(lstm_size)(lstm2)
+    net = inp
+    for _ in range(2):
+        if bidirectional:
+            net = Bidirectional(lstm_f(lstm_size, return_sequences=True), merge_mode='ave')(net)
+        else:
+            net = lstm_f(lstm_size, return_sequences=True)(net)
+    lstm3 = lstm_f(lstm_size)(net)
     return inp, lstm3
 
 
@@ -126,8 +130,8 @@ def _deep_simple_rnn(size=100):
     return inp, rnn3
 
 
-def strategy_deep_lstm_resnet(lstm_size=100, dense_size=200, loss='mse'):
-    lstm_in, lstm_out = _deep_lstm2(lstm_size)
+def strategy_deep_lstm_resnet(lstm_size=100, dense_size=200, loss='mse', bidirectional=False):
+    lstm_in, lstm_out = _deep_lstm2(lstm_size, bidirectional=bidirectional)
     aux_inp = Input(shape=(47,))
     concat = keras.layers.concatenate([lstm_out, aux_inp])
     tmp = Dense(dense_size, activation='relu')(concat)
@@ -158,6 +162,10 @@ def small_strategy_network():
     return strategy_deep_lstm_resnet(70, 140)
 
 
+def small_bidirectional_strategy_network():
+    return strategy_deep_lstm_resnet(70, 140, bidirectional=True)
+
+
 def tiny_strategy_network():
     dense_output_size = 140
     rnn_output_size = 70
@@ -176,10 +184,6 @@ def tiny_strategy_network():
 
 def small_rnn_strategy_network():
     return strategy_deep_simple_rnn_resnet(70, 140)
-
-
-def small_l1_strategy_network():
-    return strategy_deep_lstm_resnet(70, 140, keras.losses.mean_absolute_error)
 
 
 def hand_crafted_features_rnn_network() -> keras.Model:
@@ -207,8 +211,8 @@ def hand_crafted_features_rnn_network_wider() -> keras.Model:
     """ the above model performs not so well. According to the internet, it is rather rare that more than one
     hidden layer benefits the problem solving that much. In that spirit, this network decreases the depth (was 6)
     in favour of width """
-    rnn_output_size = 10
-    rnn_in, rnn_out = _deep_simple_rnn(rnn_output_size)
+    rnn_output_size = 70
+    rnn_in, rnn_out = _deep_lstm2(rnn_output_size)
     aux_input = Input(
         (140,),
         name="36_hand_cards_8_relative_table_1_current_diff_36_gone_cards_36_bocks_16_could_follow_1_points_on_table_4_made_points_2_action"

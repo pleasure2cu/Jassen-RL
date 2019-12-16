@@ -12,7 +12,7 @@ from player import RnnPlayer
 from state import GameState
 
 
-def shuffle_list(list_to_be_shuffled: List, start_i: int, end_i: int):
+def shuffle_list(list_to_be_shuffled: List, start_i: int, end_i: int) -> Tuple[List, List[int]]:
     shuffle_indices = list(range(start_i, end_i))
     random.shuffle(shuffle_indices)
     output = [list_to_be_shuffled[i] for i in shuffle_indices]
@@ -35,7 +35,7 @@ class DifferenzlerSitting(Sitting):
     def play_cards(self, nbr_of_parallel_rounds: int = 1, strategy_model: keras.Model=None) -> Tuple[np.ndarray, np.ndarray]:
         assert nbr_of_parallel_rounds == 1 or strategy_model is not None
         states = [GameState() for _ in range(nbr_of_parallel_rounds)]
-        shuffle_indices = [100] * 4 * nbr_of_parallel_rounds
+        shuffle_indices: List[int] = [None] * 4 * nbr_of_parallel_rounds
         for i in range(0, 4 * nbr_of_parallel_rounds, 4):
             self._players[i: i+4], shuffle_indices[i: i+4] = shuffle_list(self._players, i, i+4)
         for offset in range(0, nbr_of_parallel_rounds * 4, 4):

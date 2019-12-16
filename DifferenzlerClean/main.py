@@ -4,14 +4,14 @@ import numpy as np
 
 from main_helper_methods import prediction_resnet, strategy_deep_lstm_resnet, normal_pred_y_func, normal_strat_y_func, \
     normal_strategy_network, small_strategy_network, tiny_strategy_network, \
-    small_rnn_strategy_network, small_l1_strategy_network, hand_crafted_features_rnn_network, \
-    hand_crafted_features_rnn_network_wider
+    small_rnn_strategy_network, hand_crafted_features_rnn_network, \
+    hand_crafted_features_rnn_network_wider, small_bidirectional_strategy_network
 from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 4  # decides how many times the intermediate stats are written
+number_of_epochs = 3  # decides how many times the intermediate stats are written
 epoch_size = 15_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
@@ -29,10 +29,10 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount in [0, 32]:
-        pred_model_funcs = [prediction_resnet, prediction_resnet]
-        strat_model_funcs = [hand_crafted_features_rnn_network, hand_crafted_features_rnn_network_wider]
-        name_bases = ["hand_craft_{}_discount_player".format(discount), "hand_craft_{}_discount_player_wider".format(discount)]
+    for discount in [32]:
+        pred_model_funcs = [prediction_resnet]
+        strat_model_funcs = [small_bidirectional_strategy_network]
+        name_bases = ["small_bidirectional_{}_discount_player".format(discount)]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
@@ -46,7 +46,7 @@ def main():
             print(strat_model.summary())
 
             players = [
-                HandCraftEverywhereRnnPlayer(
+                RnnPlayer(
                     pred_model, strat_model, pred_memory, strat_memory,
                     normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size_pred, batch_size_strat
                 )
