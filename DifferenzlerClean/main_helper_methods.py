@@ -1,31 +1,38 @@
 import keras
 import numpy as np
 from keras import Input, Model
-from keras.layers import LSTM, Dense, Activation, BatchNormalization, SimpleRNN, CuDNNLSTM, Bidirectional
+from keras.layers import LSTM, Dense, Activation, BatchNormalization, SimpleRNN, CuDNNLSTM, Bidirectional, Dropout
 from keras import backend as K
 
 
-def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool):
+def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool, dropout: float = 0.0):
     """
     implements one resnet block. Meaning:
         Input_tensor ---> Dense -> BN -> ReLU -> Dense -> BN ---> ReLU
                       |                                       |
                        ---------------------------------------
     the resulting tensor of the last ReLU will be the return
+    :param dropout:
     :param input_tensor: as name says
     :param layer_size: size of the output of the input_tensor
     :param use_batch_norm: bool-flag
     :return: tensor from the last ReLU
     """
-    block = keras.layers.Dense(layer_size)(input_tensor)
+    if use_batch_norm and dropout == 0:
+        print('Warning: the neural net uses batch normalisation and dropout.')
+    if dropout != 0.0:
+        input_tensor = Dropout(dropout)(input_tensor)
+    block = Dense(layer_size)(input_tensor)
     if use_batch_norm:
-        block = keras.layers.BatchNormalization()(block)
-    block = keras.layers.Activation('relu')(block)
-    block = keras.layers.Dense(layer_size)(block)
+        block = BatchNormalization()(block)
+    block = Activation('relu')(block)
+    if dropout != 0.0:
+        block = Dropout(dropout)(block)
+    block = Dense(layer_size)(block)
     if use_batch_norm:
-        block = keras.layers.BatchNormalization()(block)
+        block = BatchNormalization()(block)
     block = keras.layers.add([block, input_tensor])
-    return keras.layers.Activation('relu')(block)
+    return Activation('relu')(block)
 
 
 def normal_pred_y_func(made_points: int):
@@ -228,3 +235,27 @@ def hand_crafted_features_rnn_network_wider() -> keras.Model:
     model = Model(inputs=[rnn_in, aux_input], outputs=out)
     model.compile(optimizer='rmsprop', loss='mse')
     return model
+
+
+def hand_crafted_features_hinton(dropout: float = 0.4) -> keras.Model:
+    hidden_layer_size = 210
+    rnn_in, rnn_out = _deep_lstm2(80)
+    aux_input = Input(
+        (140,),
+        name="36_hand_cards_8_relative_table_1_current_diff_36_gone_cards_36_bocks_16_could_follow_1_points_on_table_4_made_points_2_action"
+    )
+    feed_forward_input = keras.layers.concatenate([
+        rnn_out, aux_input
+    ])
+    scale_down = Dense(hidden_layer_size, activation='relu')(feed_forward_input)
+    first_block = resnet_block(scale_down, hidden_layer_size, False, dropout=dropout)
+    scnd_block = resnet_block(first_block, hidden_layer_size, False, dropout=dropout)
+    scnd_block = Dropout(dropout)(scnd_block)
+    middle_scale_down = Dense(hidden_layer_size // 2, activation='relu')(scnd_block)
+    third_block = resnet_block(middle_scale_down, hidden_layer_size // 2, False, dropout=dropout)
+    out = Dense(1)(third_block)
+    model = Model(inputs=[rnn_in, aux_input], outputs=out)
+    model.compile(optimizer='rmsprop', loss='mse')
+    return model
+
+
