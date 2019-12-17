@@ -29,7 +29,7 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount, dropout in zip([32, 32, 32], [0.2, 0.35, 0.5]):
+    for discount, dropout in zip([32, 32], [0.1, 0.2]):
         pred_model_funcs = [prediction_resnet]
         strat_model_funcs = [hand_crafted_features_hinton]
         name_bases = ["hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
