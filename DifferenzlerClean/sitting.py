@@ -107,6 +107,7 @@ class DifferenzlerSitting(Sitting):
         predictions, points_made = self.play_cards(nbr_of_parallel_rounds=nbr_of_parallel_rounds, strategy_model=strategy_model)
         total_pred_loss = 0.
         total_strat_loss = 0.
+        win_margins: List[int] = []
         for i in range(nbr_of_parallel_rounds):
             diffs = np.absolute(predictions[i] - points_made[i])
             indices_of_winners = np.where(diffs == np.min(diffs))[0]
@@ -117,8 +118,11 @@ class DifferenzlerSitting(Sitting):
                 )
                 total_pred_loss += p_loss
                 total_strat_loss += s_loss
-        diffs = np.sum(np.absolute(predictions - points_made), axis=0)
-        return total_pred_loss, total_strat_loss, diffs
+            # save the win margin
+            sorted_diffs = np.sort(diffs)
+            win_margins.append(int(sorted_diffs[1] - sorted_diffs[0]))
+        over_all_diffs = np.sum(np.absolute(predictions - points_made), axis=0)
+        return total_pred_loss, total_strat_loss, over_all_diffs, win_margins
 
     def _deal_cards(self, player_offset: int = 0):
         distribution = np.random.permutation(np.arange(36))

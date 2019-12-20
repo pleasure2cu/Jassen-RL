@@ -1,4 +1,5 @@
 import datetime
+from typing import List
 
 import numpy as np
 
@@ -29,7 +30,7 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount, dropout in zip([32], [0.5]):
+    for discount, dropout in zip([0, 32, 64], [0.3, 0.3, 0.3]):
         pred_model_funcs = [prediction_resnet]
         strat_model_funcs = [hand_crafted_features_hinton]
         name_bases = ["hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
@@ -55,6 +56,7 @@ def main():
 
             sitting = DifferenzlerSitting()
             sitting.set_players(players)
+            win_margins: List[int] = []
             for epoch_index in range(number_of_epochs):
                 epoch_start_time = datetime.datetime.now()
                 total_diff = 0
@@ -62,7 +64,7 @@ def main():
                 total_loss_s = 0.
                 for i in range(0, epoch_size, parallel_rounds):
                     # print("{}".format(epoch_index*epoch_size+i), end='\r')
-                    loss_p, loss_s, diffs = sitting.play_full_round(
+                    loss_p, loss_s, diffs, win_margins_of_sitting = sitting.play_full_round(
                         train=parallel_rounds == 1 and i % fit_window == 0,
                         nbr_of_parallel_rounds=parallel_rounds,
                         strategy_model=strat_model,
@@ -71,6 +73,7 @@ def main():
                     total_diff += np.sum(diffs)
                     total_loss_p += loss_p
                     total_loss_s += loss_s
+                    win_margins += win_margins_of_sitting
                     assert pred_memory.assert_items()
                     assert strat_memory.assert_items()
                     if i % fit_window == 0 and parallel_rounds > 1:
@@ -91,6 +94,7 @@ def main():
 
             pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
             strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
+            np.save("win_margins_{}_{}".format(name_base, number_of_epochs * epoch_size), win_margins)
 
 
 if __name__ == '__main__':
