@@ -30,7 +30,8 @@ class GameState:
         self.blies_history[self.current_blie_index][-1] = player_index
 
     def get_could_follow_vector(self, roll_vector: Optional[np.ndarray] = None) -> np.ndarray:
-        for i in range(self.could_follow_cache_nbr, int(np.sum(self.gone_cards))):
+        nbr_of_gone_cards = int(np.sum(self.gone_cards))
+        for i in range(self.could_follow_cache_nbr, nbr_of_gone_cards):
             blie_index = i // 4
             player_index = i % 4
             blie_starter_index = int(self.blies_history[blie_index, -1])
@@ -38,7 +39,7 @@ class GameState:
             player_color = int(self.blies_history[blie_index, 2 * player_index + 1])
             if player_color != 0 and blie_color != player_color:
                 self.could_follow[blie_color, player_index] = 0
-        self.could_follow_cache_nbr = int(np.sum(self.gone_cards))
+        self.could_follow_cache_nbr = nbr_of_gone_cards
         roll_vector = roll_vector if not (roll_vector is None) else np.arange(4)
         return self.could_follow[roll_vector].reshape(-1)
 

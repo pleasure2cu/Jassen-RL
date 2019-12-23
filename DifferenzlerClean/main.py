@@ -56,24 +56,18 @@ def main():
 
             sitting = DifferenzlerSitting()
             sitting.set_players(players)
-            win_margins: List[int] = []
             for epoch_index in range(number_of_epochs):
                 epoch_start_time = datetime.datetime.now()
                 total_diff = 0
-                total_loss_p = 0.
-                total_loss_s = 0.
                 for i in range(0, epoch_size, parallel_rounds):
                     # print("{}".format(epoch_index*epoch_size+i), end='\r')
-                    loss_p, loss_s, diffs, win_margins_of_sitting = sitting.play_full_round(
+                    diffs = sitting.play_full_round(
                         train=parallel_rounds == 1 and i % fit_window == 0,
                         nbr_of_parallel_rounds=parallel_rounds,
                         strategy_model=strat_model,
                         discount=discount
                     )
                     total_diff += np.sum(diffs)
-                    total_loss_p += loss_p
-                    total_loss_s += loss_s
-                    win_margins += win_margins_of_sitting
                     assert pred_memory.assert_items()
                     assert strat_memory.assert_items()
                     if i % fit_window == 0 and parallel_rounds > 1:
@@ -88,7 +82,7 @@ def main():
                 print("\ntime spent in total = {}".format(datetime.datetime.now() - epoch_start_time))
                 print("time spent in keras = {}".format(RnnPlayer.total_time_spent_in_keras))
                 print("time spent training = {}".format(RnnPlayer.time_spent_training))
-                print("avg diff = {} \t loss_p = {} \t loss_s = {}".format(total_diff/epoch_size/4, total_loss_p, total_loss_s))
+                print("avg diff = {}".format(total_diff/epoch_size/4))
                 RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
                 RnnPlayer.time_spent_training = datetime.timedelta()
 
@@ -98,7 +92,6 @@ def main():
 
             # pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
             # strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
-            # np.save("win_margins_{}_{}".format(name_base, number_of_epochs * epoch_size), win_margins)
 
 
 if __name__ == '__main__':

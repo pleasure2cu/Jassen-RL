@@ -44,16 +44,16 @@ class DifferenzlerSitting(Sitting):
         for i in range(nbr_of_parallel_rounds):
             states[i].predictions = np.array([player.make_prediction() for player in self._players[i*4: (i+1)*4]])
 
-        player_index = np.zeros(nbr_of_parallel_rounds)
+        player_index = np.zeros(nbr_of_parallel_rounds, dtype=int)
         for blie_index in range(9):
             for state_i in range(nbr_of_parallel_rounds):
                 states[state_i].current_blie_index = blie_index
                 states[state_i].set_starting_player_of_blie(player_index[state_i])
-            table_suit = -1 * np.ones(nbr_of_parallel_rounds)
+            table_suit = -1 * np.ones(nbr_of_parallel_rounds, dtype=int)
             for offset in range(4):
                 if nbr_of_parallel_rounds > 1:
                     inputs = [
-                        self._players[int(i*4+player_index[i])].form_nn_input_tensors(states[i], int(table_suit[i]))
+                        self._players[i*4+player_index[i]].form_nn_input_tensors(states[i], table_suit[i])
                         for i in range(nbr_of_parallel_rounds)
                     ]
                     filtered_inputs = filter(lambda x: len(x[0]), inputs)
@@ -73,23 +73,23 @@ class DifferenzlerSitting(Sitting):
                     played_cards = []
                     for i in range(nbr_of_parallel_rounds):
                         played_cards.append(
-                            self._players[int(i*4+player_index[i])].get_action(q_values[q_offsets[i]: q_offsets[i+1]])
+                            self._players[i*4+player_index[i]].get_action(q_values[q_offsets[i]: q_offsets[i+1]])
                         )
                 else:
-                    played_cards = [self._players[int(player_index[0])].play_card(states[0], int(table_suit[0]))]
+                    played_cards = [self._players[player_index[0]].play_card(states[0], table_suit[0])]
 
                 for parallel_i in range(nbr_of_parallel_rounds):
                     if table_suit[parallel_i] < 0:
-                        table_suit[parallel_i] = played_cards[parallel_i][-1]
-                    states[parallel_i].add_card(played_cards[parallel_i], int(player_index[parallel_i]))
+                        table_suit[parallel_i] = int(played_cards[parallel_i][-1])
+                    states[parallel_i].add_card(played_cards[parallel_i], player_index[parallel_i])
 
                 player_index = (player_index + 1) % 4
 
             tables = [np.reshape(states[state_i].blies_history[states[state_i].current_blie_index][:8], (4, 2)) for state_i in range(nbr_of_parallel_rounds)]
-            winning_index = [get_winning_card_index(tables[table_i], int(player_index[table_i])) for table_i in range(nbr_of_parallel_rounds)]
+            winning_index = [get_winning_card_index(tables[table_i], player_index[table_i]) for table_i in range(nbr_of_parallel_rounds)]
             points_on_table = [get_points_from_table(tables[table_i], blie_index == 8) for table_i in range(nbr_of_parallel_rounds)]
             for state_i in range(nbr_of_parallel_rounds):
-                states[state_i].points_made[int(winning_index[state_i])] += points_on_table[state_i]
+                states[state_i].points_made[winning_index[state_i]] += points_on_table[state_i]
             player_index = np.array(winning_index)
         for i in range(nbr_of_parallel_rounds):
             assert np.sum(states[i].points_made) == 157
@@ -104,25 +104,20 @@ class DifferenzlerSitting(Sitting):
             self, train: bool, nbr_of_parallel_rounds: int=1, strategy_model: keras.Model=None, discount: float=0.0
     ) -> Any:
         assert nbr_of_parallel_rounds == 1 or strategy_model is not None
-        predictions, points_made = self.play_cards(nbr_of_parallel_rounds=nbr_of_parallel_rounds, strategy_model=strategy_model)
-        total_pred_loss = 0.
-        total_strat_loss = 0.
-        win_margins: List[int] = []
-        for i in range(nbr_of_parallel_rounds):
+        predictions, points_made = self.play_cards(
+            nbr_of_parallel_rounds=nbr_of_parallel_rounds,
+            strategy_model=strategy_model
+        )
+        for i in range(nbr_of_parallel_rounds):  # TODO: check if optimizable
             diffs = np.absolute(predictions[i] - points_made[i])
             indices_of_winners = np.where(diffs == np.min(diffs))[0]
             winners = [self._players[i*4+index] for index in indices_of_winners]
             for prediction, made, player in zip(predictions[i], points_made[i], self._players[i*4: (i+1)*4]):
-                p_loss, s_loss = player.finish_round(
+                player.finish_round(
                     prediction, made, train, discount=discount / len(winners) if player in winners else 0.0
                 )
-                total_pred_loss += p_loss
-                total_strat_loss += s_loss
-            # save the win margin
-            sorted_diffs = np.sort(diffs)
-            win_margins.append(int(sorted_diffs[1] - sorted_diffs[0]))
         over_all_diffs = np.sum(np.absolute(predictions - points_made), axis=0)
-        return total_pred_loss, total_strat_loss, over_all_diffs, win_margins
+        return over_all_diffs
 
     def _deal_cards(self, player_offset: int = 0):
         distribution = np.random.permutation(np.arange(36))
