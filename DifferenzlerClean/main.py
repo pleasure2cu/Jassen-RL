@@ -12,8 +12,8 @@ from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 20  # decides how many times the intermediate stats are written
-epoch_size = 10_000  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 12  # decides how many times the intermediate stats are written
+epoch_size = 50_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
@@ -92,9 +92,13 @@ def main():
                 RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
                 RnnPlayer.time_spent_training = datetime.timedelta()
 
-            pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
-            strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
-            np.save("win_margins_{}_{}".format(name_base, number_of_epochs * epoch_size), win_margins)
+                if (epoch_index + 1) % 3 == 0:
+                    pred_model.save("./pred_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
+                    strat_model.save("./strat_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
+
+            # pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
+            # strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
+            # np.save("win_margins_{}_{}".format(name_base, number_of_epochs * epoch_size), win_margins)
 
 
 if __name__ == '__main__':
