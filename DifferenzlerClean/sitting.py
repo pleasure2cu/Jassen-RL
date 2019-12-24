@@ -108,9 +108,10 @@ class DifferenzlerSitting(Sitting):
             nbr_of_parallel_rounds=nbr_of_parallel_rounds,
             strategy_model=strategy_model
         )
+        diffs = np.absolute(predictions - points_made)
         for i in range(nbr_of_parallel_rounds):  # TODO: check if optimizable
-            diffs = np.absolute(predictions[i] - points_made[i])
-            indices_of_winners = np.where(diffs == np.min(diffs))[0]
+            diffs_here = diffs[i]
+            indices_of_winners = np.where(diffs_here == np.min(diffs_here))[0]
             winners = [self._players[i*4+index] for index in indices_of_winners]
             for prediction, made, player in zip(predictions[i], points_made[i], self._players[i*4: (i+1)*4]):
                 player.finish_round(
