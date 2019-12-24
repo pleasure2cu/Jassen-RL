@@ -12,10 +12,10 @@ from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 4  # decides how many times the intermediate stats are written
-epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 2  # decides how many times the intermediate stats are written
+epoch_size = 50_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
-parallel_rounds = 1
+parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 batch_size_strat = 192
 sample_limit_strat = int(6 * 32 * fit_window * sample_coverage / batch_size_strat + 1) * batch_size_strat
