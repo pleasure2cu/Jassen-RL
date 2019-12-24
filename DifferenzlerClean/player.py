@@ -173,7 +173,6 @@ class RnnPlayer(DifferenzlerPlayer):
             self, prediction: int, made_points: int, train: bool, discount: Union[int, float]=0.0
     ):
         assert np.all(self._hand_vector == 0)
-
         # boost the samples
         boosted_pred_pool = list(chain.from_iterable(
             map(lambda sample: self.boost_color_pred_sample(sample.reshape(-1)), self._prediction_pool)
@@ -186,13 +185,14 @@ class RnnPlayer(DifferenzlerPlayer):
         self._prediction_memory.add_samples(boosted_pred_pool, self._prediction_y_function(made_points))
         self._strategy_memory.add_samples(boosted_strat_pool, self._strategy_y_function(prediction, made_points)-discount)
 
-        # potentionally train
+        # potentially train
         if train:
             tmp = datetime.datetime.now()
             self._prediction_model.train_on_batch(*self._prediction_memory.draw_batch(self._batch_size_pred))
             self._strategy_model.train_on_batch(*self._strategy_memory.draw_batch(self._batch_size_strat))
-            RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
-            RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
+            t = datetime.datetime.now() - tmp
+            RnnPlayer.total_time_spent_in_keras += t
+            RnnPlayer.time_spent_training += t
 
     def boost_color_pred_sample(self, model_input: np.ndarray) -> List[np.ndarray]:
         assert len(model_input.shape) == 1

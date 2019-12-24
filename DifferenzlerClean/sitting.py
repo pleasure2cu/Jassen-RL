@@ -109,14 +109,11 @@ class DifferenzlerSitting(Sitting):
             strategy_model=strategy_model
         )
         diffs = np.absolute(predictions - points_made)
-        for i in range(nbr_of_parallel_rounds):  # TODO: check if optimizable
-            diffs_here = diffs[i]
-            indices_of_winners = np.where(diffs_here == np.min(diffs_here))[0]
-            winners = [self._players[i*4+index] for index in indices_of_winners]
-            for prediction, made, player in zip(predictions[i], points_made[i], self._players[i*4: (i+1)*4]):
-                player.finish_round(
-                    prediction, made, train, discount=discount / len(winners) if player in winners else 0.0
-                )
+        discount_factors = np.apply_along_axis(get_discount_factors, axis=1, arr=diffs)
+        for pred, made, player, disc_factor in zip(
+                predictions.reshape(-1), points_made.reshape(-1), self._players, discount_factors.reshape(-1)
+        ):
+            player.finish_round(pred, made, train, disc_factor * discount)
         over_all_diffs = np.sum(np.absolute(predictions - points_made), axis=0)
         return over_all_diffs
 
@@ -127,3 +124,10 @@ class DifferenzlerSitting(Sitting):
             hand = np.zeros(36)
             hand[indices] = 1
             self._players[i + player_offset].start_round(hand, i)
+
+
+def get_discount_factors(table_diff: np.ndarray) -> np.ndarray:
+    min_indices = np.where(table_diff == np.min(table_diff))[0]
+    discount_factors = np.zeros(4)  # so the number of the players at the table
+    discount_factors[min_indices] = 1. / len(min_indices)
+    return discount_factors
