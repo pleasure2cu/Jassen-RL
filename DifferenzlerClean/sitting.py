@@ -48,32 +48,29 @@ class DifferenzlerSitting(Sitting):
                 states[state_i].set_starting_player_of_blie(player_indices[state_i])
             table_suits = -1 * np.ones(nbr_of_parallel_rounds, dtype=int)
             for offset in range(4):
-                if nbr_of_parallel_rounds > 1:
-                    inputs = [
-                        self._players[i*4+player_indices[i]].form_nn_input_tensors(states[i], table_suits[i])
-                        for i in range(nbr_of_parallel_rounds)
+                inputs = [
+                    self._players[i*4+player_indices[i]].form_nn_input_tensors(states[i], table_suits[i])
+                    for i in range(nbr_of_parallel_rounds)
+                ]
+                filtered_inputs = filter(lambda x: len(x[0]), inputs)
+                rnn_and_aux_aggregated = list(zip(*filtered_inputs))
+                if len(rnn_and_aux_aggregated) != 0:
+                    nn_input = [
+                        np.concatenate(rnn_and_aux_aggregated[0], axis=0),
+                        np.concatenate(rnn_and_aux_aggregated[1], axis=0)
                     ]
-                    filtered_inputs = filter(lambda x: len(x[0]), inputs)
-                    rnn_and_aux_aggregated = list(zip(*filtered_inputs))
-                    if len(rnn_and_aux_aggregated) != 0:
-                        nn_input = [
-                            np.concatenate(rnn_and_aux_aggregated[0], axis=0),
-                            np.concatenate(rnn_and_aux_aggregated[1], axis=0)
-                        ]
-                        tmp = datetime.datetime.now()
-                        q_values = strategy_model.predict(nn_input).reshape(-1) if len(nn_input[1]) != 0 else []
-                        RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
-                    else:
-                        q_values = []
-                    q_values_per_player = [len(aux) for rnn, aux in inputs]
-                    q_offsets = [0] + [sum(q_values_per_player[:i]) for i in range(1, len(q_values_per_player) + 1)]
-                    played_cards = []
-                    for i in range(nbr_of_parallel_rounds):
-                        played_cards.append(
-                            self._players[i*4+player_indices[i]].get_action(q_values[q_offsets[i]: q_offsets[i+1]])
-                        )
+                    tmp = datetime.datetime.now()
+                    q_values = strategy_model.predict(nn_input).reshape(-1) if len(nn_input[1]) != 0 else []
+                    RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
                 else:
-                    played_cards = [self._players[player_indices[0]].play_card(states[0], table_suits[0])]
+                    q_values = []
+                q_values_per_player = [len(aux) for rnn, aux in inputs]
+                q_offsets = [0] + [sum(q_values_per_player[:i]) for i in range(1, len(q_values_per_player) + 1)]
+                played_cards = []
+                for i in range(nbr_of_parallel_rounds):
+                    played_cards.append(
+                        self._players[i*4+player_indices[i]].get_action(q_values[q_offsets[i]: q_offsets[i+1]])
+                    )
 
                 for parallel_i in range(nbr_of_parallel_rounds):
                     if table_suits[parallel_i] < 0:
