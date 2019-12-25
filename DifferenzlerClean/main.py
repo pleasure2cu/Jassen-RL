@@ -44,7 +44,7 @@ def main():
             strat_memory = RnnReplayMemory(16_000 * 6)
 
             pred_model = pred_model_func()
-            strat_model = strat_model_func(drouput=dropout)
+            strat_model = strat_model_func(dropout=dropout)
             print(strat_model.summary())
 
             players = [
