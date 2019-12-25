@@ -259,3 +259,27 @@ def hand_crafted_features_hinton(dropout: float = 0.4) -> keras.Model:
     return model
 
 
+def hand_crafted_features_double_hinton(hidden_layer_size: int = 250, dropout: float = 0.5) -> keras.Model:
+    rnn_in, rnn_out = _deep_lstm2(100)
+    aux_input = Input(
+        (140,),
+        name="36_hand_cards_8_relative_table_1_current_diff_36_gone_cards_36_bocks_16_could_follow_1_points_on_table_4_made_points_2_action"
+    )
+    feed_forward_input = keras.layers.concatenate([
+        rnn_out, aux_input
+    ])
+    scale_layer = Dense(hidden_layer_size, activation='relu')(feed_forward_input)
+    first_block = resnet_block(scale_layer, hidden_layer_size, False, dropout=dropout)
+    scnd_block = resnet_block(first_block, hidden_layer_size, False, dropout=dropout)
+    third_block = resnet_block(scnd_block, hidden_layer_size, False, dropout=dropout)
+    d = Dropout(dropout)(third_block)
+    middle = Dense(hidden_layer_size // 2, activation='relu')(d)
+    fourth_block = resnet_block(middle, hidden_layer_size // 2, False, dropout=dropout)
+    out = Dense(1)(fourth_block)
+    model = Model(inputs=[rnn_in, aux_input], outputs=out)
+    model.compile(optimizer='rmsprop', loss='mse')
+    return model
+
+
+
+

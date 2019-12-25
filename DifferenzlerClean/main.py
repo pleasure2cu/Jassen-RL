@@ -6,7 +6,8 @@ import numpy as np
 from main_helper_methods import prediction_resnet, strategy_deep_lstm_resnet, normal_pred_y_func, normal_strat_y_func, \
     normal_strategy_network, small_strategy_network, tiny_strategy_network, \
     small_rnn_strategy_network, hand_crafted_features_rnn_network, \
-    hand_crafted_features_rnn_network_wider, small_bidirectional_strategy_network, hand_crafted_features_hinton
+    hand_crafted_features_rnn_network_wider, small_bidirectional_strategy_network, hand_crafted_features_hinton, \
+    hand_crafted_features_double_hinton
 from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
@@ -30,10 +31,10 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount, dropout in zip([157], [0.3]):
+    for discount, dropout in zip([96], [0.5]):
         pred_model_funcs = [prediction_resnet]
-        strat_model_funcs = [hand_crafted_features_hinton]
-        name_bases = ["hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
+        strat_model_funcs = [hand_crafted_features_double_hinton]
+        name_bases = ["double_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
@@ -43,7 +44,7 @@ def main():
             strat_memory = RnnReplayMemory(16_000 * 6)
 
             pred_model = pred_model_func()
-            strat_model = strat_model_func(dropout)
+            strat_model = strat_model_func(drouput=dropout)
             print(strat_model.summary())
 
             players = [
