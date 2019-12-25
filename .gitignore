@@ -5,3 +5,4 @@ stats.txt
 __pycache__
 spielecke_rnn.py
 investigate.py
+*.npy

@@ -6,19 +6,28 @@ import numpy as np
 
 from abstract_classes.player import DifferenzlerPlayer
 from main_helper_methods import normal_pred_y_func, normal_strat_y_func, prediction_resnet, normal_strategy_network, \
-    small_strategy_network, tiny_strategy_network
+    small_strategy_network, tiny_strategy_network, hand_crafted_features_rnn_network, \
+    hand_crafted_features_rnn_network_wider, small_bidirectional_strategy_network, hand_crafted_features_hinton
 from memory import ReplayMemory, RnnReplayMemory
-from player import RnnPlayer, StreunRnnPlayer
+from player import RnnPlayer, StreunRnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_rounds = 50
+number_of_rounds = 10_000
 
 
 def get_net(name: str) -> keras.Model:
     if 'strat' in name:
-        if 'normal' in name:
+        if "strat_hand_craft" in name and "wider" in name:
+            return hand_crafted_features_rnn_network_wider()
+        elif "strat_hand_craft" in name:
+            return hand_crafted_features_rnn_network()
+        elif 'hinton' in name:
+            return hand_crafted_features_hinton(0.3)
+        elif 'normal' in name:
             return normal_strategy_network()
+        elif 'small' in name and 'bidirectional' in name:
+            return small_bidirectional_strategy_network()
         elif "small" in name:
             return small_strategy_network()
         elif "tiny" in name:
@@ -41,20 +50,16 @@ def load_models_with_streun(net_names: List[str]) -> List[Tuple[keras.Model, ker
         nets[i].load_weights(net_names[i])
     nets.append(keras.models.load_model("./normal_prediction_2000000.h5"))
     nets.append(keras.models.load_model("./normal_strategy_2000000.h5"))
-    nets *= 8 // len(net_names)
+    nets *= 8 // len(nets)
     return [(nets[i], nets[i + 1]) for i in range(0, len(nets), 2)]
 
 
-sys_inputs = [
-    [
-        "pred_normal_player_32_discount_750000.h5", "strat_normal_player_32_discount_750000.h5",
-    ]
-]
-
-
 def main():
-    use_streun = '-streun' in sys.argv
+    sys_inputs = [sys.argv[1:]]
     for sys_input in sys_inputs:
+        use_streun = '-streun' in sys_input
+        if use_streun:
+            sys_input.remove('-streun')
         for i in sys_input:
             print(i)
         if use_streun:
@@ -66,7 +71,7 @@ def main():
         players: List[DifferenzlerPlayer] = []
         if use_streun:
             players = [
-                RnnPlayer(
+                HandCraftEverywhereRnnPlayer(
                     pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0,
                     0.0, 1, 1
                 )
@@ -75,12 +80,24 @@ def main():
             players[1] = StreunRnnPlayer(*models[1])
             players[3] = StreunRnnPlayer(*models[1])
         else:
-            players = [
-                RnnPlayer(
-                    pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1, 1
+            # players = [
+            #     RnnPlayer(
+            #         pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1, 1
+            #     )
+            #     for pred_model, strat_model in models
+            # ]
+            players = []
+            for i, model_tuple in enumerate(models):
+                if (i % 2) == 0:
+                    player_constructor = HandCraftEverywhereRnnPlayer
+                else:
+                    player_constructor = RnnPlayer
+                players.append(
+                    player_constructor(
+                        model_tuple[0], model_tuple[1], pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func,
+                        0.0, 0.0, 1, 1
+                    )
                 )
-                for pred_model, strat_model in models
-            ]
 
         sitting = DifferenzlerSitting()
         sitting.set_players(players)
