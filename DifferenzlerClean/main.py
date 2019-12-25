@@ -12,8 +12,8 @@ from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 2  # decides how many times the intermediate stats are written
-epoch_size = 50_000  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 8  # decides how many times the intermediate stats are written
+epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
@@ -30,7 +30,7 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount, dropout in zip([32], [0.5]):
+    for discount, dropout in zip([157], [0.3]):
         pred_model_funcs = [prediction_resnet]
         strat_model_funcs = [hand_crafted_features_hinton]
         name_bases = ["hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
@@ -86,12 +86,12 @@ def main():
                 RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
                 RnnPlayer.time_spent_training = datetime.timedelta()
 
-                if (epoch_index + 1) % 3 == 0:
-                    pred_model.save("./pred_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
-                    strat_model.save("./strat_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
+                # if (epoch_index + 1) % 3 == 0:
+                #     pred_model.save("./pred_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
+                #     strat_model.save("./strat_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
 
-            # pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
-            # strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
+            pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
+            strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
 
 
 if __name__ == '__main__':
