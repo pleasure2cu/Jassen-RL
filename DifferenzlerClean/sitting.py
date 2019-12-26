@@ -1,6 +1,7 @@
 import datetime
 import random
-from typing import Any, Tuple, List
+from operator import itemgetter
+from typing import Any, Tuple, List, Dict
 
 import keras
 import numpy as np
@@ -32,79 +33,106 @@ class DifferenzlerSitting(Sitting):
     def set_players(self, players: List[DifferenzlerPlayer]):
         self._players = players
 
-    def play_cards(self, nbr_of_parallel_rounds: int = 1, strategy_model: keras.Model=None) -> Tuple[np.ndarray, np.ndarray]:
-        assert nbr_of_parallel_rounds == 1 or strategy_model is not None
-        states = [GameState() for _ in range(nbr_of_parallel_rounds)]
-        shuffle_indices: List[int] = [None] * 4 * nbr_of_parallel_rounds
-        for i in range(0, nbr_of_parallel_rounds * 4, 4):
-            self._players[i: i+4], shuffle_indices[i: i+4] = shuffle_list(self._players, i, i+4)
-            self._deal_cards(player_offset=i)
-            states[i // 4].predictions = np.array([player.make_prediction() for player in self._players[i: i+4]])
+    def play_cards(self, shuffle: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+        if len(self._players) % 4:
+            print("The number of players in the sitting has to be a multiple of 4. But is", len(self._players))
+            exit()
+        nbr_of_tables = len(self._players) // 4
+        states = [GameState() for _ in range(nbr_of_tables)]
+        if shuffle:
+            tmp = list(enumerate(self._players))
+            random.shuffle(tmp)
+            shuffle_indices, self._players = zip(*tmp)
+        for i in range(nbr_of_tables):
+            self._deal_cards(player_offset=4*i)
+            states[i].predictions = np.array([player.make_prediction() for player in self._players[i*4: (i+1)*4]])
 
-        player_indices = np.zeros(nbr_of_parallel_rounds, dtype=int)
+        for i in range(nbr_of_tables):
+            assert np.array_equal(
+                np.sum([player._hand_vector for player in self._players[4*i: 4*(i+1)]], axis=0),
+                np.ones(36)
+            ), np.sum([player._hand_vector for player in self._players[4*i: 4*(i+1)]], axis=0)
+
+        player_indices = np.zeros(nbr_of_tables, dtype=int)
         for blie_index in range(9):
-            for state_i in range(nbr_of_parallel_rounds):
+            for state_i in range(nbr_of_tables):
                 states[state_i].current_blie_index = blie_index
                 states[state_i].set_starting_player_of_blie(player_indices[state_i])
-            table_suits = -1 * np.ones(nbr_of_parallel_rounds, dtype=int)
-            for offset in range(4):
-                if nbr_of_parallel_rounds > 1:
-                    inputs = [
-                        self._players[i*4+player_indices[i]].form_nn_input_tensors(states[i], table_suits[i])
-                        for i in range(nbr_of_parallel_rounds)
-                    ]
-                    filtered_inputs = filter(lambda x: len(x[0]), inputs)
-                    rnn_and_aux_aggregated = list(zip(*filtered_inputs))
-                    if len(rnn_and_aux_aggregated) != 0:
-                        nn_input = [
-                            np.concatenate(rnn_and_aux_aggregated[0], axis=0),
-                            np.concatenate(rnn_and_aux_aggregated[1], axis=0)
-                        ]
-                        tmp = datetime.datetime.now()
-                        q_values = strategy_model.predict(nn_input).reshape(-1) if len(nn_input[1]) != 0 else []
-                        RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
-                    else:
-                        q_values = []
-                    q_values_per_player = [len(aux) for rnn, aux in inputs]
-                    q_offsets = [0] + [sum(q_values_per_player[:i]) for i in range(1, len(q_values_per_player) + 1)]
-                    played_cards = []
-                    for i in range(nbr_of_parallel_rounds):
-                        played_cards.append(
-                            self._players[i*4+player_indices[i]].get_action(q_values[q_offsets[i]: q_offsets[i+1]])
+            table_suits = -1 * np.ones(nbr_of_tables, dtype=int)
+            for inside_blie_turn_counter in range(4):
+                played_cards = np.empty((nbr_of_tables, 2))
+                turn_player_from_each_table = [
+                    (
+                        self._players[4*table_index + player_index].strategy_model,
+                        4*table_index + player_index,
+                        self._players[4 * table_index + player_index].form_nn_input_tensors(
+                            states[table_index],
+                            table_suits[table_index]
                         )
-                else:
-                    played_cards = [self._players[player_indices[0]].play_card(states[0], table_suits[0])]
+                    )
+                    for table_index, player_index in enumerate(player_indices)
+                ]
 
-                for parallel_i in range(nbr_of_parallel_rounds):
-                    if table_suits[parallel_i] < 0:
-                        table_suits[parallel_i] = int(played_cards[parallel_i][-1])
-                    states[parallel_i].add_card(played_cards[parallel_i], player_indices[parallel_i])
+                # the goal of this part is to group the triples by the first entry
+                unique_nets = set(map(itemgetter(0), turn_player_from_each_table))
+                triplets_aggregated_by_net: Dict[keras.Model, List[Tuple[int, Tuple[np.ndarray, np.ndarray]]]] = \
+                    dict(zip(unique_nets, map(lambda _: [], unique_nets)))
+                for t in turn_player_from_each_table:
+                    triplets_aggregated_by_net[t[0]].append(t[1:])
+
+                for net, indices_and_tensors_list in triplets_aggregated_by_net.items():
+                    rnn_tensors, aux_tensors = list(zip(*map(itemgetter(1), indices_and_tensors_list)))
+                    nn_input = [
+                        np.concatenate(rnn_tensors, axis=0),
+                        np.concatenate(aux_tensors, axis=0)
+                    ]
+                    tmp = datetime.datetime.now()
+                    q_values = net.predict(nn_input).reshape(-1) if len(nn_input[1]) != 0 else []
+                    RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
+
+                    offset = 0
+                    for player_i, player_tensors in indices_and_tensors_list:
+                        nbr_of_inputs = len(player_tensors[1])
+                        played_cards[player_i // 4] = \
+                            self._players[player_i].get_action(q_values[offset: offset + nbr_of_inputs])
+                        offset += nbr_of_inputs
+
+                if inside_blie_turn_counter == 0:
+                    for table_i in range(nbr_of_tables):
+                        table_suits[table_i] = int(played_cards[table_i, -1])
+                for table_i in range(nbr_of_tables):
+                    states[table_i].add_card(played_cards[table_i], player_indices[table_i])
 
                 player_indices = (player_indices + 1) % 4
 
-            tables = [np.reshape(states[state_i].blies_history[states[state_i].current_blie_index][:8], (4, 2)) for state_i in range(nbr_of_parallel_rounds)]
-            winning_index = [get_winning_card_index(tables[table_i], player_indices[table_i]) for table_i in range(nbr_of_parallel_rounds)]
-            points_on_table = [get_points_from_table(tables[table_i], blie_index == 8) for table_i in range(nbr_of_parallel_rounds)]
-            for state_i in range(nbr_of_parallel_rounds):
+            tables = [
+                np.reshape(states[state_i].blies_history[states[state_i].current_blie_index][:8], (4, 2))
+                for state_i in range(nbr_of_tables)
+            ]
+            winning_index = [
+                get_winning_card_index(tables[table_i], player_indices[table_i])
+                for table_i in range(nbr_of_tables)
+            ]
+            points_on_table = [
+                get_points_from_table(tables[table_i], blie_index == 8) for table_i in range(nbr_of_tables)
+            ]
+            for state_i in range(nbr_of_tables):
                 states[state_i].points_made[winning_index[state_i]] += points_on_table[state_i]
             player_indices = np.array(winning_index)
-        for i in range(nbr_of_parallel_rounds):
+
+        for i in range(nbr_of_tables):
             assert np.sum(states[i].points_made) == 157
-        self._players = reverse_shuffle(self._players, shuffle_indices)
-        predictions = np.array([states[state_i].predictions for state_i in range(nbr_of_parallel_rounds)]).reshape(-1)
-        predictions = np.array(reverse_shuffle(predictions, shuffle_indices)).reshape((-1, 4))
-        points_made = np.array([states[state_i].points_made for state_i in range(nbr_of_parallel_rounds)]).reshape(-1)
-        points_made = np.array(reverse_shuffle(points_made, shuffle_indices)).reshape((-1, 4))
+
+        predictions = np.array([states[state_i].predictions for state_i in range(nbr_of_tables)]).reshape(-1)
+        points_made = np.array([states[state_i].points_made for state_i in range(nbr_of_tables)]).reshape(-1)
+        if shuffle:
+            self._players = reverse_shuffle(self._players, shuffle_indices)
+            predictions = np.array(reverse_shuffle(predictions, shuffle_indices)).reshape((-1, 4))
+            points_made = np.array(reverse_shuffle(points_made, shuffle_indices)).reshape((-1, 4))
         return predictions, points_made
 
-    def play_full_round(
-            self, train: bool, nbr_of_parallel_rounds: int=1, strategy_model: keras.Model=None, discount: float=0.0
-    ) -> Any:
-        assert nbr_of_parallel_rounds == 1 or strategy_model is not None
-        predictions, points_made = self.play_cards(
-            nbr_of_parallel_rounds=nbr_of_parallel_rounds,
-            strategy_model=strategy_model
-        )
+    def play_full_round(self, train: bool, discount: float=0.0) -> Any:
+        predictions, points_made = self.play_cards()
         diffs = np.absolute(predictions - points_made)
         discount_factors = np.apply_along_axis(get_discount_factors, axis=1, arr=diffs)
         for pred, made, player, disc_factor in zip(

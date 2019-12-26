@@ -1,12 +1,14 @@
 import abc
 from typing import Any, Tuple, Union
 
+import keras
 import numpy as np
 
 from state import GameState
 
 
 class DifferenzlerPlayer(metaclass=abc.ABCMeta):
+    strategy_model: keras.Model
 
     @abc.abstractmethod
     def start_round(self, hand_vector: np.ndarray, table_position: int):

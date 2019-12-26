@@ -12,8 +12,8 @@ from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, StreunRnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
-
-number_of_rounds = 10_000
+number_of_parallel_table_configurations = 10
+number_of_rounds = 10_000 // 6 // number_of_parallel_table_configurations
 
 
 def get_net(name: str) -> keras.Model:
@@ -80,41 +80,55 @@ def main():
             players[1] = StreunRnnPlayer(*models[1])
             players[3] = StreunRnnPlayer(*models[1])
         else:
-            # players = [
-            #     RnnPlayer(
-            #         pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1, 1
-            #     )
-            #     for pred_model, strat_model in models
-            # ]
-            players = []
-            for i, model_tuple in enumerate(models):
-                if (i % 2) == 0:
-                    player_constructor = HandCraftEverywhereRnnPlayer
-                else:
-                    player_constructor = RnnPlayer
-                players.append(
-                    player_constructor(
-                        model_tuple[0], model_tuple[1], pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func,
-                        0.0, 0.0, 1, 1
-                    )
+            t_model, s_model = models[0], models[1]
+            all_configs = [
+                t_model, s_model, t_model, s_model,
+                s_model, t_model, s_model, t_model,
+                t_model, t_model, s_model, s_model,
+                s_model, t_model, t_model, s_model,
+                s_model, s_model, t_model, t_model,
+                t_model, s_model, s_model, t_model
+            ]
+            t_model_indices_base = np.array([0, 2, 5, 7, 8, 9, 13, 14, 18, 19, 20, 23])
+            s_model_indices_base = np.array([1, 3, 4, 6, 10, 11, 12, 15, 16, 17, 21, 22])
+            t_model_indices = [t_model_indices_base + 24 * np.ones(12) * k for k in range(number_of_parallel_table_configurations)]
+            s_model_indices = [s_model_indices_base + 24 * np.ones(12) * k for k in range(number_of_parallel_table_configurations)]
+            t_model_indices = np.array(t_model_indices, dtype=int).reshape(-1)
+            s_model_indices = np.array(s_model_indices, dtype=int).reshape(-1)
+
+            all_configs *= number_of_parallel_table_configurations
+            players = [
+                RnnPlayer(
+                    model_tuple[0], model_tuple[1], pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func,
+                    0.0, 0.0, 1, 1
                 )
+                for model_tuple in all_configs
+            ]
 
         sitting = DifferenzlerSitting()
         sitting.set_players(players)
-        total_diffs = np.zeros(4)
-        won_rounds = np.zeros(4)
+        total_diffs = np.zeros(24 * number_of_parallel_table_configurations)
+        won_rounds = np.zeros(24 * number_of_parallel_table_configurations)
         for i in range(number_of_rounds):
-            preds, mades = sitting.play_cards()
+            preds, mades = sitting.play_cards(shuffle=False)
             diffs = np.absolute(preds - mades).reshape(-1)
             total_diffs += diffs
-            indices_of_wins = np.where(diffs == diffs.min())[0]
-            for win_i in indices_of_wins:
-                won_rounds[win_i] += 1 / len(indices_of_wins)
+            for table_i, table_diffs in enumerate(diffs.reshape((-1, 4))):
+                indices_of_wins = np.where(table_diffs == table_diffs.min())[0]
+                for win_indice in indices_of_wins:
+                    won_rounds[table_i * 4 + win_indice] += 1 / len(indices_of_wins)
             print("{}% ({} / {})".format(int((i+1) / number_of_rounds * 1000) / 10, i+1, number_of_rounds), end='\r')
+        # total diffs contains the diffs of each player. Each player only has played 'number_of_rounds' rounds
         avg_diffs = total_diffs / number_of_rounds
-        diffs_per_agent_type = [(avg_diffs[0] + avg_diffs[2])/2, (avg_diffs[1] + avg_diffs[3])/2]
-        wins_per_agent_type = [won_rounds[0] + won_rounds[2], won_rounds[1] + won_rounds[3]]
-        wa = (wins_per_agent_type[0] / number_of_rounds * 100 - 50) * 2
+        diffs_per_agent_type = [
+            np.sum(avg_diffs[t_model_indices]) / len(t_model_indices),
+            np.sum(avg_diffs[s_model_indices]) / len(s_model_indices)
+        ]
+        wins_per_agent_type = [
+            np.sum(won_rounds[t_model_indices]),
+            np.sum(won_rounds[s_model_indices])
+        ]
+        wa = (wins_per_agent_type[0] / (number_of_rounds * 6 * number_of_parallel_table_configurations) * 100 - 50) * 2
         print("Average difference:", avg_diffs)
         print("Won rounds:", won_rounds)
         print("avg. diffs: {0:.2f} vs {1:.2f}".format(diffs_per_agent_type[0], diffs_per_agent_type[1]))

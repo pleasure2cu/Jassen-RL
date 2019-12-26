@@ -44,7 +44,7 @@ def main():
             strat_memory = RnnReplayMemory(16_000 * 6)
 
             pred_model = pred_model_func()
-            strat_model = strat_model_func(drouput=dropout)
+            strat_model = strat_model_func(dropout=dropout)
             print(strat_model.summary())
 
             players = [
@@ -64,8 +64,6 @@ def main():
                     # print("{}".format(epoch_index*epoch_size+i), end='\r')
                     diffs = sitting.play_full_round(
                         train=parallel_rounds == 1 and i % fit_window == 0,
-                        nbr_of_parallel_rounds=parallel_rounds,
-                        strategy_model=strat_model,
                         discount=discount
                     )
                     total_diff += np.sum(diffs)

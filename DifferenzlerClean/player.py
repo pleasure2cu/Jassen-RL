@@ -65,7 +65,7 @@ class RnnPlayer(DifferenzlerPlayer):
     #   - action as two-numbers representation
 
     _prediction_model: keras.Model
-    _strategy_model: keras.Model
+    strategy_model: keras.Model
     _prediction_memory: ReplayMemory
     _strategy_memory: RnnReplayMemory
     _prediction_exp: float
@@ -93,7 +93,7 @@ class RnnPlayer(DifferenzlerPlayer):
             batch_size_pred:int, batch_size_strat: int
     ):
         self._prediction_model = prediction_model
-        self._strategy_model = strategy_model
+        self.strategy_model = strategy_model
         self._prediction_memory = prediction_memory
         self._strategy_memory = strategy_memory
         self._prediction_exp = prediction_exp
@@ -165,7 +165,7 @@ class RnnPlayer(DifferenzlerPlayer):
         if len(aux_state_action_tensor) == 0:
             q_values = []
         else:
-            q_values = self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
+            q_values = self.strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
         RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
         return self.get_action(q_values)
 
@@ -189,7 +189,7 @@ class RnnPlayer(DifferenzlerPlayer):
         if train:
             tmp = datetime.datetime.now()
             self._prediction_model.train_on_batch(*self._prediction_memory.draw_batch(self._batch_size_pred))
-            self._strategy_model.train_on_batch(*self._strategy_memory.draw_batch(self._batch_size_strat))
+            self.strategy_model.train_on_batch(*self._strategy_memory.draw_batch(self._batch_size_strat))
             t = datetime.datetime.now() - tmp
             RnnPlayer.total_time_spent_in_keras += t
             RnnPlayer.time_spent_training += t
@@ -237,7 +237,7 @@ class StreunRnnPlayer(DifferenzlerPlayer):
     # be run in agent_arena and not be used to train anything
 
     _prediction_model: keras.Model
-    _strategy_model: keras.Model
+    strategy_model: keras.Model
 
     _hand_vector: np.ndarray
     _table_position: int
@@ -245,7 +245,7 @@ class StreunRnnPlayer(DifferenzlerPlayer):
 
     def __init__(self, prediction_model: keras.Model, strategy_model: keras.Model):
         self._prediction_model = prediction_model
-        self._strategy_model = strategy_model
+        self.strategy_model = strategy_model
 
     def start_round(self, hand_vector: np.ndarray, table_position: int):
         self._hand_vector = hand_vector
@@ -264,7 +264,7 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         if len(aux_state_action_tensor) == 0:
             q_values = []
         else:
-            q_values = self._strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
+            q_values = self.strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
         return self.get_action(q_values)
 
     _current_possible_actions: np.ndarray
