@@ -35,7 +35,7 @@ def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool, dropout: f
     return Activation('relu')(block)
 
 
-def normal_pred_y_func(made_points: int):
+def normal_pred_y_func(_: int, made_points: int):
     return made_points
 
 

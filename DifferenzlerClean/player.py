@@ -182,7 +182,7 @@ class RnnPlayer(DifferenzlerPlayer):
         ))
 
         # give the samples to the respective memories
-        self._prediction_memory.add_samples(boosted_pred_pool, self._prediction_y_function(made_points))
+        self._prediction_memory.add_samples(boosted_pred_pool, self._prediction_y_function(prediction, made_points))
         self._strategy_memory.add_samples(boosted_strat_pool, self._strategy_y_function(prediction, made_points)-discount)
 
         # potentially train
