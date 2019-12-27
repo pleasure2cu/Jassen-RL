@@ -31,10 +31,10 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount, dropout in zip([96], [0.5]):
+    for discount, dropout in zip([32], [0.5]):
         pred_model_funcs = [prediction_resnet]
-        strat_model_funcs = [hand_crafted_features_double_hinton]
-        name_bases = ["double_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
+        strat_model_funcs = [hand_crafted_features_hinton]
+        name_bases = ["scnd_reproduce_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
