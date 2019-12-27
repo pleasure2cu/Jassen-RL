@@ -15,8 +15,8 @@ from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
-number_of_epochs = 8  # decides how many times the intermediate stats are written
-epoch_size = 12_500  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 4  # decides how many times the intermediate stats are written
+epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 batch_size_strat = 192
@@ -47,7 +47,7 @@ def some_magic() -> Tuple[List[DifferenzlerPlayer], List[Tuple[keras.Model, Memo
     ]
 
     return players, [(pred_model, pred_memory, strat_model, strat_memory, 1)], \
-           "thrid_reproduce_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
+           "fourth_reproduce_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
 
 
 def main():
@@ -60,7 +60,7 @@ def main():
         epoch_start_time = datetime.datetime.now()
         total_diff = 0
         for i in range(0, epoch_size, fit_window):
-            diffs = sitting.play_full_round(train=False, discount=discount)
+            diffs = sitting.play_full_round(train=False, discount=discount, shuffle=False)
             total_diff += np.sum(diffs)
             # assert pred_memory.assert_items()
             # assert strat_memory.assert_items()

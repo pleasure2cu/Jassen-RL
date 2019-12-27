@@ -131,8 +131,8 @@ class DifferenzlerSitting(Sitting):
             points_made = np.array(reverse_shuffle(points_made, shuffle_indices)).reshape((-1, 4))
         return predictions, points_made
 
-    def play_full_round(self, train: bool, discount: float=0.0) -> Any:
-        predictions, points_made = self.play_cards()
+    def play_full_round(self, train: bool, discount: float=0.0, shuffle: bool = True) -> Any:
+        predictions, points_made = self.play_cards(shuffle=shuffle)
         diffs = np.absolute(predictions - points_made)
         discount_factors = np.apply_along_axis(get_discount_factors, axis=1, arr=diffs)
         for pred, made, player, disc_factor in zip(
