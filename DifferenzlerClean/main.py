@@ -47,7 +47,7 @@ def some_magic() -> Tuple[List[DifferenzlerPlayer], List[Tuple[keras.Model, Memo
     ]
 
     return players, [(pred_model, pred_memory, strat_model, strat_memory, 1)], \
-           "reproduce_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
+           "thrid_reproduce_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
 
 
 def main():
