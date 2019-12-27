@@ -35,7 +35,7 @@ def some_magic() -> Tuple[List[DifferenzlerPlayer], List[Tuple[keras.Model, Memo
     strat_memory = RnnReplayMemory(16_000 * 6)
 
     pred_model: keras.Model = prediction_resnet()
-    strat_model = hand_crafted_features_rnn_network()
+    strat_model = hand_crafted_features_hinton(dropout=0.5)
     strat_model.summary()
 
     players = [
