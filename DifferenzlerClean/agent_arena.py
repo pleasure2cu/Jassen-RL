@@ -28,7 +28,7 @@ def get_net(name: str) -> keras.Model:
             if 'double' in name:
                 return hand_crafted_features_double_hinton(dropout=0.5)
             else:
-                return hand_crafted_features_hinton(0.3)
+                return hand_crafted_features_hinton(0.5)
         elif 'normal' in name:
             return normal_strategy_network()
         elif 'small' in name and 'bidirectional' in name:
