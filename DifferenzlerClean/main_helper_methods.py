@@ -307,11 +307,11 @@ def hand_crafted_features_multi_hinton(
     return model
 
 
-def hand_crafted_features_quad_hinton() -> keras.Model:
+def hand_crafted_features_quad_hinton(dropout=0.5) -> keras.Model:
     return hand_crafted_features_multi_hinton(
         lstm_size=120,
         hidden_layer_size=350,
-        dropout=0.5,
+        dropout=dropout,
         n_big_block=4,
         n_half_blocks=3
     )
