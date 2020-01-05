@@ -7,13 +7,13 @@ from main_helper_methods import prediction_resnet, strategy_deep_lstm_resnet, no
     normal_strategy_network, small_strategy_network, tiny_strategy_network, \
     small_rnn_strategy_network, hand_crafted_features_rnn_network, \
     hand_crafted_features_rnn_network_wider, small_bidirectional_strategy_network, hand_crafted_features_hinton, \
-    hand_crafted_features_double_hinton
+    hand_crafted_features_double_hinton, hand_crafted_features_quad_hinton
 from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 4  # decides how many times the intermediate stats are written
+number_of_epochs = 8  # decides how many times the intermediate stats are written
 epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
@@ -31,10 +31,10 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount, dropout in zip([32], [0.5]):
+    for discount, dropout in zip([96], [0.5]):
         pred_model_funcs = [prediction_resnet]
-        strat_model_funcs = [hand_crafted_features_hinton]
-        name_bases = ["scnd_reproduce_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
+        strat_model_funcs = [hand_crafted_features_quad_hinton]
+        name_bases = ["quad_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
 
