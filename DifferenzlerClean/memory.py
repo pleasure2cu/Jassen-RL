@@ -28,11 +28,15 @@ class ReplayMemory(Memory):
         self._items = self._items[-s:]
 
     def assert_items(self) -> bool:
-        this_round = self._items[-4:]
-        assert np.all(reduce(lambda x, y: x + y[0][:36], this_round, np.zeros(36)) == 1)
-        for i, sample in enumerate(this_round):
-            assert sample[0][-1] == i or True  # this got corrupted when the sitting readjusted the seating after
-                                               # playing a round of cards
+        block = self._items[-360:]
+        for turn_i in range(12):
+            base_sample = block[turn_i]
+            for sample_offset in range(turn_i + 12, 360, 12):
+                test_sample = block[sample_offset]
+                if np.array_equal(base_sample[0], test_sample[0]):
+                    assert False
+                if base_sample[1] != base_sample[1]:
+                    assert False
         return True
 
 
@@ -61,16 +65,34 @@ class RnnReplayMemory(Memory):
         ]
 
     def assert_items(self) -> bool:
-        for player_i in range(1, 5):
-            for series_i in range(1, RnnReplayMemory._nbr_of_sublists):
-                tuple_before = self._items[series_i - 1][-player_i]
-                tuple_now = self._items[series_i][-player_i]
-                # check that the y is always the same
-                assert tuple_before[-1] == tuple_now[-1]
-                # check that the remaining points are decreasing
-                assert tuple_before[1][-3] >= tuple_now[1][-3]
-                # check that the whole history is the same as before plus something
-                old = tuple_before[0][:series_i - 1]
-                new = tuple_now[0][:series_i - 1]
-                assert np.array_equal(old, new)
+        for bucket in self._items:
+            block = bucket[-360:]
+
+            # group all the samples that should be the same
+            grouped = [
+                [
+                    block[sample_offset] for sample_offset in range(turn_i, 360, 12)
+                ]
+                for turn_i in range(12)
+            ]
+
+            for group in grouped:
+                base_sample = group[0]
+                for test_sample in group[1:]:
+                    if not np.array_equal(base_sample[0], test_sample[0]):
+                        assert False
+                    if not np.array_equal(base_sample[1], test_sample[1]):
+                        assert False
+                    if base_sample[2] != test_sample[2]:
+                        assert False
+
+        # check the rewards across buckets
+        a = [
+            np.array([sample[2] for sample in bucket])
+            for bucket in self._items
+        ]
+        for test_sample in a[1:]:
+            if not np.array_equal(a[0], test_sample):
+                assert False
+
         return True
