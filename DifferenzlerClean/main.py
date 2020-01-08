@@ -62,8 +62,6 @@ def main():
         for i in range(0, epoch_size, fit_window):
             diffs = sitting.play_full_round(train=False, discount=discount, shuffle=False)
             total_diff += np.sum(diffs)
-            # assert pred_memory.assert_items()
-            # assert strat_memory.assert_items()
             for pred_model, pred_mem, strat_model, strat_mem, training_factor in training_tuples:
                 xs_pred, ys_pred = pred_mem.draw_batch(sample_limit_pred * training_factor)
                 xs_strat, ys_strat = strat_mem.draw_batch(sample_limit_strat * training_factor)
@@ -85,9 +83,6 @@ def main():
             training_start_time + (datetime.datetime.now() - training_start_time) / (epoch_index + 1) * number_of_epochs
         )
 
-        # if (epoch_index + 1) % 3 == 0:
-        #     pred_model.save("./pred_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
-        #     strat_model.save("./strat_{}_{}.h5".format(name_base, (epoch_index + 1) * epoch_size))
     for pred_model, _, strat_model, _, _ in training_tuples:
         pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
         strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
