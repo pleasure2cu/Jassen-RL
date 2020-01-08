@@ -6,3 +6,5 @@ __pycache__
 spielecke_rnn.py
 investigate.py
 *.npy
+!DifferenzlerClean/normal_prediction_2000000.h5
+!DifferenzlerClean/normal_strategy_2000000.h5
