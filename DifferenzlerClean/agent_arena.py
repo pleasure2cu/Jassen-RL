@@ -8,13 +8,27 @@ from abstract_classes.player import DifferenzlerPlayer
 from main_helper_methods import normal_pred_y_func, normal_strat_y_func, prediction_resnet, normal_strategy_network, \
     small_strategy_network, tiny_strategy_network, hand_crafted_features_rnn_network, \
     hand_crafted_features_rnn_network_wider, small_bidirectional_strategy_network, hand_crafted_features_hinton, \
-    hand_crafted_features_double_hinton
+    hand_crafted_features_double_hinton, hand_crafted_features_quad_hinton
 from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, StreunRnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
-number_of_parallel_table_configurations = 166
-number_of_rounds = 10_000 // 6 // number_of_parallel_table_configurations
+total_rounds = 20_000
+rounds_per_partie = 20
+starting_clock = 4  # there are four positions from which a hand can start
+player_factor = rounds_per_partie // starting_clock  # we vectorise over the different positions of the starting player
+parallel_factor = 5
+epochs = total_rounds // rounds_per_partie // 2 // parallel_factor
+
+# for readability
+actual_diffs = 4
+
+starting_clock_turn_back_indices = np.array([
+    [0, 1, 2, 3],
+    [1, 2, 3, 0],
+    [2, 3, 0, 1],
+    [3, 0, 1, 2]
+])
 
 
 def get_net(name: str) -> keras.Model:
@@ -27,6 +41,8 @@ def get_net(name: str) -> keras.Model:
             print("Be aware of the dropout rate")
             if 'double' in name:
                 return hand_crafted_features_double_hinton(dropout=0.5)
+            elif 'quad' in name:
+                return hand_crafted_features_quad_hinton()
             else:
                 return hand_crafted_features_hinton(0.5)
         elif 'normal' in name:
@@ -59,24 +75,19 @@ def load_models_with_streun(net_names: List[str]) -> List[Tuple[keras.Model, ker
 
 def get_models_configs(models):
     t_model, s_model = models[0], models[1]
-    all_configs = [
+    cross = [
         t_model, s_model, t_model, s_model,
         s_model, t_model, s_model, t_model,
+        t_model, s_model, t_model, s_model,
+        s_model, t_model, s_model, t_model,
+    ]
+    side = [
         t_model, t_model, s_model, s_model,
         s_model, t_model, t_model, s_model,
         s_model, s_model, t_model, t_model,
         t_model, s_model, s_model, t_model
     ]
-    t_model_indices_base = np.array([0, 2, 5, 7, 8, 9, 13, 14, 18, 19, 20, 23])
-    s_model_indices_base = np.array([1, 3, 4, 6, 10, 11, 12, 15, 16, 17, 21, 22])
-    t_model_indices = [t_model_indices_base + 24 * np.ones(12) * k for k in
-                       range(number_of_parallel_table_configurations)]
-    s_model_indices = [s_model_indices_base + 24 * np.ones(12) * k for k in
-                       range(number_of_parallel_table_configurations)]
-    t_model_indices = np.array(t_model_indices, dtype=int).reshape(-1)
-    s_model_indices = np.array(s_model_indices, dtype=int).reshape(-1)
-    all_configs *= number_of_parallel_table_configurations
-    return all_configs, s_model_indices, t_model_indices
+    return cross * player_factor * parallel_factor + side * player_factor * parallel_factor
 
 
 def main():
@@ -91,7 +102,7 @@ def main():
             print("streun_pred")
             print("streun_strat")
         models = load_models_with_streun(sys_input) if use_streun else load_all_models(sys_input)
-        all_configs, s_model_indices, t_model_indices = get_models_configs(models)
+        all_configs = get_models_configs(models)
         pred_memory = ReplayMemory(1)
         strat_memory = RnnReplayMemory(1)
         players: List[DifferenzlerPlayer] = []
@@ -105,7 +116,7 @@ def main():
                 for pred_model, strat_model in all_configs
             ]
         else:
-            players_constr = [HandCraftEverywhereRnnPlayer, HandCraftEverywhereRnnPlayer]
+            players_constr = [RnnPlayer, RnnPlayer]
             players = [
                 (players_constr[0] if pred_model == all_configs[0][0] else players_constr[1])(
                     pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func,
@@ -116,34 +127,29 @@ def main():
 
         sitting = DifferenzlerSitting()
         sitting.set_players(players)
-        total_diffs = np.zeros(24 * number_of_parallel_table_configurations)
-        won_rounds = np.zeros(24 * number_of_parallel_table_configurations)
-        for i in range(number_of_rounds):
+        wins = [0, 0]
+        for i in range(epochs):
             preds, mades = sitting.play_cards(shuffle=False)
-            diffs = np.absolute(preds - mades).reshape(-1)
-            total_diffs += diffs
-            for table_i, table_diffs in enumerate(diffs.reshape((-1, 4))):
-                indices_of_wins = np.where(table_diffs == table_diffs.min())[0]
-                for win_indice in indices_of_wins:
-                    won_rounds[table_i * 4 + win_indice] += 1 / len(indices_of_wins)
-            print("{}% ({} / {})".format(int((i+1) / number_of_rounds * 1000) / 10, i+1, number_of_rounds), end='\r')
-        # total diffs contains the diffs of each player. Each player only has played 'number_of_rounds' rounds
-        avg_diffs = total_diffs / number_of_rounds
-        diffs_per_agent_type = [
-            np.sum(avg_diffs[t_model_indices]) / len(t_model_indices),
-            np.sum(avg_diffs[s_model_indices]) / len(s_model_indices)
-        ]
-        wins_per_agent_type = [
-            np.sum(won_rounds[t_model_indices]),
-            np.sum(won_rounds[s_model_indices])
-        ]
-        wa = (wins_per_agent_type[0] / (number_of_rounds * 6 * number_of_parallel_table_configurations) * 100 - 50) * 2
-        # print("Average difference:", avg_diffs)
-        # print("Won rounds:", won_rounds)
-        print("avg. diffs: {0:.2f} vs {1:.2f}".format(diffs_per_agent_type[0], diffs_per_agent_type[1]))
-        print("WA = {0:.2f}".format(wa))
-        print("total rounds:", number_of_rounds * 6 * number_of_parallel_table_configurations)
-        print("\n\n\n")
+            diffs = np.absolute(preds - mades).reshape((-1, actual_diffs))
+
+            for k in range(len(diffs)):
+                diffs[k] = diffs[k][starting_clock_turn_back_indices[k % 4]]
+
+            diffs = diffs.reshape((2, parallel_factor, player_factor * starting_clock, actual_diffs))
+            partie_diffs = np.sum(diffs, axis=2).reshape((-1, 4))
+
+            for partie in partie_diffs:
+                winner_indices = np.argwhere(partie == np.min(partie))[0]
+                for winner_i in winner_indices:
+                    wins[int(winner_i) % 2] += 1. / len(winner_indices)
+
+            print("{}% ({} / {})".format(int((i + 1) / epochs * 1000) / 10, i + 1, epochs), end='\r')
+
+        print("the total match ended with:\n{} - {}\tp({}, {}) = {}".format(
+            wins[0], wins[1], rounds_per_partie,
+            str(total_rounds / 1000) + 'K', wins[0] / total_rounds * rounds_per_partie
+        ))
+        print('over {} total rounds'.format(total_rounds))
 
 
 if __name__ == '__main__':

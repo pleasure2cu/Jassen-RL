@@ -35,7 +35,7 @@ def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool, dropout: f
     return Activation('relu')(block)
 
 
-def normal_pred_y_func(_: int, made_points: int):
+def normal_pred_y_func(made_points: int):
     return made_points
 
 
@@ -281,5 +281,37 @@ def hand_crafted_features_double_hinton(hidden_layer_size: int = 250, dropout: f
     return model
 
 
+def hand_crafted_features_multi_hinton(
+        lstm_size: int, hidden_layer_size: int, dropout: float, n_big_block: int, n_half_blocks: int
+) -> keras.Model:
+    rnn_in, rnn_out = _deep_lstm2(lstm_size)
+    aux_input = Input(
+        (140,),
+        name="36_hand_cards_8_relative_table_1_current_diff_36_gone_cards_36_bocks_16_could_follow_1_points_on_table_4_made_points_2_action"
+    )
+    feed_forward_input = keras.layers.concatenate([
+        rnn_out, aux_input
+    ])
+    scale_layer = Dense(hidden_layer_size, activation='relu')(feed_forward_input)
+    net = scale_layer
+    for i in range(n_big_block):
+        net = resnet_block(net, hidden_layer_size, use_batch_norm=False, dropout=dropout)
+    d = Dropout(dropout)(net)
+    middle = Dense(hidden_layer_size // 2, activation='relu')(d)
+    net = middle
+    for i in range(n_half_blocks):
+        net = resnet_block(net, hidden_layer_size // 2, use_batch_norm=False, dropout=dropout)
+    out = Dense(1)(net)
+    model = Model(inputs=[rnn_in, aux_input], outputs=out)
+    model.compile(optimizer='rmsprop', loss='mse')
+    return model
 
 
+def hand_crafted_features_quad_hinton(dropout=0.5) -> keras.Model:
+    return hand_crafted_features_multi_hinton(
+        lstm_size=120,
+        hidden_layer_size=350,
+        dropout=dropout,
+        n_big_block=4,
+        n_half_blocks=3
+    )
