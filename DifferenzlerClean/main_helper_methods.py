@@ -35,13 +35,13 @@ def resnet_block(input_tensor, layer_size: int, use_batch_norm: bool, dropout: f
     return Activation('relu')(block)
 
 
-def normal_pred_y_func(made_points: int):
+def normal_pred_y_func(predicted_points: int, made_points: int):
     return made_points
 
 
 def normal_strat_y_func(predicted_points: int, made_points: int) -> int:
     assert made_points is not None and 0 <= made_points <= 257
-    return -1 * np.absolute(predicted_points - made_points)
+    return np.absolute(predicted_points - made_points)
 
 
 def aggressive_strat_y_func(predicted_points: int, made_points: int) -> int:

@@ -127,9 +127,9 @@ class DifferenzlerSitting(Sitting):
         points_made = np.array([states[state_i].points_made for state_i in range(nbr_of_tables)]).reshape(-1)
         if shuffle:
             self._players = reverse_shuffle(self._players, shuffle_indices)
-            predictions = np.array(reverse_shuffle(predictions, shuffle_indices)).reshape((-1, 4))
-            points_made = np.array(reverse_shuffle(points_made, shuffle_indices)).reshape((-1, 4))
-        return predictions, points_made
+            predictions = np.array(reverse_shuffle(predictions, shuffle_indices))
+            points_made = np.array(reverse_shuffle(points_made, shuffle_indices))
+        return predictions.reshape((-1, 4)), points_made.reshape((-1, 4))
 
     def play_full_round(self, train: bool, discount: float=0.0, shuffle: bool = True) -> Any:
         predictions, points_made = self.play_cards(shuffle=shuffle)
