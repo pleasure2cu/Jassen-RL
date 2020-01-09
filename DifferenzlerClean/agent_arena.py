@@ -17,7 +17,7 @@ total_rounds = 20_000
 rounds_per_partie = 20
 starting_clock = 4  # there are four positions from which a hand can start
 player_factor = rounds_per_partie // starting_clock  # we vectorise over the different positions of the starting player
-parallel_factor = 5
+parallel_factor = 25
 epochs = total_rounds // rounds_per_partie // 2 // parallel_factor
 
 # for readability

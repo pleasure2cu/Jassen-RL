@@ -16,7 +16,7 @@ from player import RnnPlayer, HandCraftEverywhereRnnPlayer, StreunRnnPlayer
 from sitting import DifferenzlerSitting
 
 number_of_epochs = 5  # decides how many times the intermediate stats are written
-epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
+epoch_size = 1_500  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 batch_size_strat = 192
@@ -35,19 +35,27 @@ def some_magic(discount: int) \
     strat_memory = RnnReplayMemory(16_000 * 6)
 
     pred_model: keras.Model = prediction_resnet()
-    strat_model = hand_crafted_features_quad_hinton(dropout=0.5)
+    strat_model = hand_crafted_features_hinton(dropout=0.5)
     strat_model.summary()
 
-    streun_pred_model = keras.models.load_model("./normal_prediction_2000000.h5")
-    streun_strat_model = keras.models.load_model("./normal_strategy_2000000.h5")
+    # streun_pred_model = keras.models.load_model("./normal_prediction_2000000.h5")
+    # streun_strat_model = keras.models.load_model("./normal_strategy_2000000.h5")
+    #
+    # players = [
+    #     HandCraftEverywhereRnnPlayer(
+    #         pred_model, strat_model, pred_memory, strat_memory,
+    #         normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size_pred, batch_size_strat
+    #     ) if i % 30 in [0, 2, 5, 7, 8, 10, 13, 15, 14, 15, 19, 20, 24, 25, 26, 29] else
+    #     StreunRnnPlayer(streun_pred_model, streun_strat_model)
+    #     for i in range(4 * fit_window)
+    # ]
 
     players = [
         HandCraftEverywhereRnnPlayer(
             pred_model, strat_model, pred_memory, strat_memory,
             normal_pred_y_func, normal_strat_y_func, 0.07, 0.07, batch_size_pred, batch_size_strat
-        ) if i % 30 in [0, 2, 5, 7, 8, 10, 13, 15, 14, 15, 19, 20, 24, 25, 26, 29] else
-        StreunRnnPlayer(streun_pred_model, streun_strat_model)
-        for i in range(4 * fit_window)
+        )
+        for _ in range(4 * fit_window)
     ]
 
     return players, [(pred_model, pred_memory, strat_model, strat_memory, 1)], \
