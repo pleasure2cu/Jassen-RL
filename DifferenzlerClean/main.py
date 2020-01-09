@@ -13,8 +13,8 @@ from player import RnnPlayer, HandCraftEverywhereRnnPlayer
 from sitting import DifferenzlerSitting
 
 
-number_of_epochs = 8  # decides how many times the intermediate stats are written
-epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 5  # decides how many times the intermediate stats are written
+epoch_size = 1_500  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 parallel_rounds = fit_window
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
@@ -31,9 +31,9 @@ if fit_window % parallel_rounds != 0:
 
 
 def main():
-    for discount, dropout in zip([96], [0.5]):
+    for discount, dropout in zip([32], [0.5]):
         pred_model_funcs = [prediction_resnet]
-        strat_model_funcs = [hand_crafted_features_quad_hinton]
+        strat_model_funcs = [hand_crafted_features_hinton]
         name_bases = ["quad_hinton_net_{}_discount_{}_dropout_player".format(discount, int(dropout*100))]
 
         for pred_model_func, strat_model_func, name_base in zip(pred_model_funcs, strat_model_funcs, name_bases):
