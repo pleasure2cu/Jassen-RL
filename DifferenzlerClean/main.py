@@ -15,8 +15,8 @@ from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, HandCraftEverywhereRnnPlayer, StreunRnnPlayer
 from sitting import DifferenzlerSitting
 
-number_of_epochs = 10  # decides how many times the intermediate stats are written
-epoch_size = 10_000  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 5  # decides how many times the intermediate stats are written
+epoch_size = 20_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 batch_size_strat = 192
@@ -59,11 +59,11 @@ def some_magic(discount: int) \
     ]
 
     return players, [(pred_model, pred_memory, strat_model, strat_memory, 1)], \
-           "quad_hinton_net_beat_streun_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
+           "hinton_net_test_discounts_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
 
 
 def main():
-    for discount in [0]:
+    for discount in [0, 2, 4, 8, 16, 32]:
         players, training_tuples, name_base = some_magic(discount)
         print("\n\n\nCurrently training: {}".format(name_base))
         sitting = DifferenzlerSitting()
