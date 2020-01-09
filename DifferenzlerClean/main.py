@@ -15,7 +15,7 @@ from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, HandCraftEverywhereRnnPlayer, StreunRnnPlayer
 from sitting import DifferenzlerSitting
 
-number_of_epochs = 6  # decides how many times the intermediate stats are written
+number_of_epochs = 5  # decides how many times the intermediate stats are written
 epoch_size = 25_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
