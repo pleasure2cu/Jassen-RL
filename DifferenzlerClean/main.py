@@ -15,8 +15,8 @@ from memory import ReplayMemory, RnnReplayMemory
 from player import RnnPlayer, HandCraftEverywhereRnnPlayer, StreunRnnPlayer
 from sitting import DifferenzlerSitting
 
-number_of_epochs = 5  # decides how many times the intermediate stats are written
-epoch_size = 1_500  # decides over how many rounds an intermediate stats text goes
+number_of_epochs = 10  # decides how many times the intermediate stats are written
+epoch_size = 10_000  # decides over how many rounds an intermediate stats text goes
 fit_window = 15  # after how many rounds the model is trained
 sample_coverage = 1.0  # what percentage of samples do you want to be looked at (in the optimal case)
 batch_size_strat = 192
@@ -63,7 +63,7 @@ def some_magic(discount: int) \
 
 
 def main():
-    for discount in [32]:
+    for discount in [0]:
         players, training_tuples, name_base = some_magic(discount)
         print("\n\n\nCurrently training: {}".format(name_base))
         sitting = DifferenzlerSitting()
