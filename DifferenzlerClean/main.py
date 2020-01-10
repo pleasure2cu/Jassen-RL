@@ -99,6 +99,7 @@ def main():
         for pred_model, _, strat_model, _, _ in training_tuples:
             pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
             strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
+    print("training is over")
 
 
 if __name__ == '__main__':
