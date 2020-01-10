@@ -63,7 +63,7 @@ def some_magic(discount: int) \
 
 
 def main():
-    for discount in [8]:
+    for discount in [0, 8]:
         players, training_tuples, name_base = some_magic(discount)
         print("\n\n\nCurrently training: {}".format(name_base))
         sitting = DifferenzlerSitting()
