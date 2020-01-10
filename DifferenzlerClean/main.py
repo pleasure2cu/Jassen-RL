@@ -35,7 +35,7 @@ def some_magic(discount: int) \
     strat_memory = RnnReplayMemory(16_000 * 6)
 
     pred_model: keras.Model = prediction_resnet()
-    strat_model = hand_crafted_features_double_hinton(dropout=0.5)
+    strat_model = hand_crafted_features_quad_hinton(dropout=0.5)
     strat_model.summary()
 
     # streun_pred_model = keras.models.load_model("./normal_prediction_2000000.h5")
@@ -59,11 +59,11 @@ def some_magic(discount: int) \
     ]
 
     return players, [(pred_model, pred_memory, strat_model, strat_memory, 1)], \
-           "double_hinton_net_new_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
+           "quad_hinton_net_new_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
 
 
 def main():
-    for discount in [32, 96]:
+    for discount in [8]:
         players, training_tuples, name_base = some_magic(discount)
         print("\n\n\nCurrently training: {}".format(name_base))
         sitting = DifferenzlerSitting()
