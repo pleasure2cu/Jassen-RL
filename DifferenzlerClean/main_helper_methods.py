@@ -46,32 +46,24 @@ def normal_strat_y_func(predicted_points: int, made_points: int) -> int:
 
 def aggressive_strat_y_func(predicted_points: int, made_points: int) -> int:
     output = normal_strat_y_func(predicted_points, made_points)
-    if made_points + 5 < predicted_points:
-        output -= 8
-    elif made_points < predicted_points:
-        output -= 2
+    if made_points < predicted_points + 5:
+        output += 5
     return output
 
 
 def defensive_strat_y_func(predicted_points: int, made_points: int) -> int:
     output = normal_strat_y_func(predicted_points, made_points)
-    if made_points - 5 > predicted_points:
-        output -= 8
-    elif made_points > predicted_points:
-        output -= 2
+    if made_points > predicted_points - 5:
+        output += 5
     return output
 
 
 def very_aggressive_strat_y_func(predicted_points: int, made_points: int) -> int:
-    output = normal_strat_y_func(predicted_points, made_points)
-    output += made_points
-    return output
+    return 157 - made_points  # we want to minimize the distance to winning all points
 
 
 def very_defensive_strat_y_func(predicted_points: int, made_points: int) -> int:
-    output = normal_strat_y_func(predicted_points, made_points)
-    output -= made_points
-    return output
+    return made_points  # we want to minimize the amount of points we make
 
 
 def prediction_resnet(loss='mse'):
