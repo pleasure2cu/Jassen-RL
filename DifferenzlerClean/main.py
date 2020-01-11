@@ -115,14 +115,14 @@ def many_players_magic(discount: int) \
 def main():
     discount = 4
     players, training_tuples = many_players_magic(discount)
-    players_og_length = len(players)
+    og_training_tuples_length = len(training_tuples)
     # print("\n\n\nCurrently training: {}".format(name_base))
     sitting = DifferenzlerSitting()
     sitting.set_players(players)
     training_start_time = datetime.datetime.now()
     print("The training begins ({})".format(training_start_time))
     rounds_played = 0
-    while (datetime.datetime.now() - training_start_time).total_seconds() < 11 * 3600:
+    while (datetime.datetime.now() - training_start_time).total_seconds() < 9.5 * 3600:
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
         for pred_model, pred_mem, strat_model, strat_mem, training_factor, _ in training_tuples:
             xs_pred, ys_pred = pred_mem.draw_batch(sample_limit_pred * training_factor)
@@ -144,18 +144,18 @@ def main():
             RnnPlayer.time_spent_training = datetime.timedelta()
 
         if rounds_played == 8_000 // fit_window:  # freeze copies of the non-normal players
-            freeze_players(players, players_og_length, rounds_played, training_tuples, 1, 2 * 4 * fit_window)
+            freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, 1, 2)
             print("The 1st freeze round has been performed. We have {} players now.".format(len(players)))
         elif rounds_played == 80_000 // fit_window:
-            freeze_players(players, players_og_length, rounds_played, training_tuples, fit_window // 2)
+            freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, fit_window // 2)
             print("The 2nd freeze round has been performed. We have {} players now.".format(len(players)))
         elif rounds_played == 500_000 // fit_window:
-            freeze_players(players, players_og_length, rounds_played, training_tuples, fit_window // 2)
+            freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, fit_window // 2)
             print("The 3rd freeze round has been performed. We have {} players now.".format(len(players)))
 
     for pred_model, _, strat_model, _, _, name_base in training_tuples:
-        pred_model.save("./pred_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
-        strat_model.save("./strat_{}_{}.h5".format(name_base, number_of_epochs * epoch_size))
+        pred_model.save("./pred_{}_{}.h5".format(name_base, rounds_played * fit_window))
+        strat_model.save("./strat_{}_{}.h5".format(name_base, rounds_played * fit_window))
     print("training is over")
 
 
@@ -165,7 +165,7 @@ def freeze_players(
 ):
     new_pred_mem = ReplayMemory(1)
     new_strat_mem = RnnReplayMemory(1)
-    for k in range(start_index, og_lenght, 4 * fit_window):
+    for k in range(start_index, og_lenght):
         pred_m, _, strat_m, _, _, name_b = training_tuples[k]
         pred_name = "./pred_{}_{}.h5".format(name_b, rounds_played * fit_window)
         strat_name = "./strat_{}_{}.h5".format(name_b, rounds_played * fit_window)
