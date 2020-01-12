@@ -66,9 +66,10 @@ def some_magic(discount: int) \
 
 
 def add_frozen_players(players: List[DifferenzlerPlayer]):
-    path_to_frozen_nets = './ongoing_nets/frozen_nets/'
+    path_to_frozen_nets = './ongoing_nets/forzen_nets/'
     frozen_nets = os.listdir(path_to_frozen_nets) if path.exists(path_to_frozen_nets) else []
     if len(frozen_nets) == 0:
+        print("there are no frozen nets")
         return
     pred_mem = ReplayMemory(1)
     strat_mem = RnnReplayMemory(1)
