@@ -1,4 +1,6 @@
 import datetime
+import os
+from os import path
 from typing import List, Tuple
 
 import keras
@@ -63,25 +65,86 @@ def some_magic(discount: int) \
            "quad_hinton_net_new_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
 
 
+def add_frozen_players(players: List[DifferenzlerPlayer]):
+    frozen_nets = os.listdir('./ongoing_nets/frozen_nets') if path.exists('./ongoing_nets/frozen_nets') else []
+    if len(frozen_nets) == 0:
+        return
+    pred_mem = ReplayMemory(1)
+    strat_mem = RnnReplayMemory(1)
+    if any(map(lambda name: name.endswith('7995.h5'), frozen_nets)):  # we passed the first checkpoint
+        net_names = [
+            (
+                "pred_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5",
+                "strat_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5"
+            ),
+            (
+                "pred_double_hinton_defensive_discount_4_dropout_50_player_7995.h5",
+                "strat_double_hinton_defensive_discount_4_dropout_50_player_7995.h5"
+            ),
+            (
+                "pred_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5",
+                "strat_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5"
+            ),
+            (
+                "pred_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5",
+                "strat_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5"
+            )
+        ]
+        for pred_name, strat_name in net_names:
+            pred_model = keras.models.load_model(pred_name)
+            strat_model = keras.models.load_model(strat_name)
+            players += [
+                HandCraftEverywhereRnnPlayer(pred_model, strat_model, pred_mem, strat_mem, normal_pred_y_func,
+                                             normal_strat_y_func, 0.001, 0.001, 1, 1)
+                for _ in range(4)
+            ]
+
+
 def many_players_magic(discount: int) \
         -> Tuple[List[DifferenzlerPlayer], List[Tuple[keras.Model, Memory, keras.Model, Memory, int, str]]]:
     # we want 2 normal player nets, 1 each for aggressive, defensive, hyper aggressive, hyper defensive
     memory_scaling = 6 * 2
+    ongoing_nets = os.listdir('./ongoing_nets/active_nets') if path.exists('./ongoing_nets/active_nets') else []
 
-    def get_tuple(pred_y_func, strat_y_func):
+    def get_tuple(pred_y_func, strat_y_func, pred_net_path=None, strat_net_path=None):
+        if pred_net_path is not None:
+            print("loading {}".format(pred_net_path))
+            print("loading {}".format(strat_net_path))
         return (
-            prediction_resnet(), hand_crafted_features_double_hinton(), ReplayMemory(2_000 * memory_scaling),
+            prediction_resnet() if pred_net_path is None else keras.models.load_model(pred_net_path),
+            hand_crafted_features_double_hinton() if strat_net_path is None else keras.models.load_model(strat_net_path),
+            ReplayMemory(2_000 * memory_scaling),
             RnnReplayMemory(16_000 * memory_scaling), pred_y_func, strat_y_func, 0.06, 0.06,
             batch_size_pred, batch_size_strat
         )
 
+    def get_net_name(contain: List[str], not_contain: List[str]=[]) -> str:
+        tmp = filter(lambda name: all(map(lambda c: c in name, contain)), ongoing_nets)
+        net_name = list(filter(lambda name: not any(map(lambda c: c in name, not_contain)), tmp))
+        if len(net_name) != 1:
+            print("Loading ongoing nets failed. The given filters are:")
+            print(contain, not_contain)
+            print("The matches are: {}".format(net_name))
+        return net_name[0]
+
+    net_paths_ongoing = [(None, None)] * 6
+    if len(ongoing_nets) != 0:
+        net_paths_ongoing = [
+            (get_net_name(['pred', "normal_1"]), get_net_name(['strat', 'normal_1'])),
+            (get_net_name(['pred', "normal_2"]), get_net_name(['strat', 'normal_2'])),
+            (get_net_name(['pred', "aggressive"], ['hyper']), get_net_name(['strat', 'aggressive'], ['hyper'])),
+            (get_net_name(['pred', "defensive"], ['hyper']), get_net_name(['strat', 'defensive'], ['hyper'])),
+            (get_net_name(['pred', "hyper_aggressive"]), get_net_name(['strat', 'hyper_aggressive'])),
+            (get_net_name(['pred', "hyper_defensive"]), get_net_name(['strat', 'hyper_defensive'])),
+        ]
+
     player_args = [
-        get_tuple(normal_pred_y_func, normal_strat_y_func),
-        get_tuple(normal_pred_y_func, normal_strat_y_func),
-        get_tuple(normal_pred_y_func, aggressive_strat_y_func),
-        get_tuple(normal_pred_y_func, defensive_strat_y_func),
-        get_tuple(normal_pred_y_func, very_aggressive_strat_y_func),
-        get_tuple(normal_pred_y_func, very_defensive_strat_y_func),
+        get_tuple(normal_pred_y_func, normal_strat_y_func, *net_paths_ongoing[0]),
+        get_tuple(normal_pred_y_func, normal_strat_y_func, *net_paths_ongoing[1]),
+        get_tuple(normal_pred_y_func, aggressive_strat_y_func, *net_paths_ongoing[2]),
+        get_tuple(normal_pred_y_func, defensive_strat_y_func, *net_paths_ongoing[3]),
+        get_tuple(normal_pred_y_func, very_aggressive_strat_y_func, *net_paths_ongoing[4]),
+        get_tuple(normal_pred_y_func, very_defensive_strat_y_func, *net_paths_ongoing[5]),
     ]
 
     players = sum([
@@ -90,6 +153,7 @@ def many_players_magic(discount: int) \
         ]
         for player_arg in player_args
     ], [])
+    add_frozen_players(players)
 
     name_bases = [
         "double_hinton_normal_1_discount_{}_dropout_50_player".format(discount),
@@ -120,8 +184,11 @@ def main():
     sitting = DifferenzlerSitting()
     sitting.set_players(players)
     training_start_time = datetime.datetime.now()
-    print("The training begins ({})".format(training_start_time))
     rounds_played = 0
+    if path.exists('./ongoing_nets/active_nets') and len('./ongoing_nets/active_nets') != 0:
+        rounds_played = int(os.listdir('./ongoing_nets/active_nets')[0].split('_')[-1][:-3]) // fit_window
+    print("The training begins with {} players and rounds_played = {}, at {}"
+          .format(len(players), rounds_played, training_start_time))
     while (datetime.datetime.now() - training_start_time).total_seconds() < 9.5 * 3600:
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
         for pred_model, pred_mem, strat_model, strat_mem, training_factor, _ in training_tuples:
