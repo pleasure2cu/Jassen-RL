@@ -66,7 +66,8 @@ def some_magic(discount: int) \
 
 
 def add_frozen_players(players: List[DifferenzlerPlayer]):
-    frozen_nets = os.listdir('./ongoing_nets/frozen_nets') if path.exists('./ongoing_nets/frozen_nets') else []
+    path_to_frozen_nets = './ongoing_nets/frozen_nets/'
+    frozen_nets = os.listdir(path_to_frozen_nets) if path.exists(path_to_frozen_nets) else []
     if len(frozen_nets) == 0:
         return
     pred_mem = ReplayMemory(1)
@@ -74,20 +75,20 @@ def add_frozen_players(players: List[DifferenzlerPlayer]):
     if any(map(lambda name: name.endswith('7995.h5'), frozen_nets)):  # we passed the first checkpoint
         net_names = [
             (
-                "pred_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5",
-                "strat_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5"
+                path_to_frozen_nets + "pred_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5",
+                path_to_frozen_nets + "strat_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5"
             ),
             (
-                "pred_double_hinton_defensive_discount_4_dropout_50_player_7995.h5",
-                "strat_double_hinton_defensive_discount_4_dropout_50_player_7995.h5"
+                path_to_frozen_nets + "pred_double_hinton_defensive_discount_4_dropout_50_player_7995.h5",
+                path_to_frozen_nets + "strat_double_hinton_defensive_discount_4_dropout_50_player_7995.h5"
             ),
             (
-                "pred_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5",
-                "strat_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5"
+                path_to_frozen_nets + "pred_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5",
+                path_to_frozen_nets + "strat_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5"
             ),
             (
-                "pred_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5",
-                "strat_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5"
+                path_to_frozen_nets + "pred_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5",
+                path_to_frozen_nets + "strat_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5"
             )
         ]
         for pred_name, strat_name in net_names:
@@ -98,13 +99,15 @@ def add_frozen_players(players: List[DifferenzlerPlayer]):
                                              normal_strat_y_func, 0.001, 0.001, 1, 1)
                 for _ in range(4)
             ]
+        print("The networks from the first checkpoint have been added")
 
 
 def many_players_magic(discount: int) \
         -> Tuple[List[DifferenzlerPlayer], List[Tuple[keras.Model, Memory, keras.Model, Memory, int, str]]]:
     # we want 2 normal player nets, 1 each for aggressive, defensive, hyper aggressive, hyper defensive
     memory_scaling = 6 * 2
-    ongoing_nets = os.listdir('./ongoing_nets/active_nets') if path.exists('./ongoing_nets/active_nets') else []
+    path_to_active_nets = './ongoing_nets/active_nets/'
+    ongoing_nets = os.listdir(path_to_active_nets) if path.exists(path_to_active_nets) else []
 
     def get_tuple(pred_y_func, strat_y_func, pred_net_path=None, strat_net_path=None):
         if pred_net_path is not None:
@@ -125,7 +128,7 @@ def many_players_magic(discount: int) \
             print("Loading ongoing nets failed. The given filters are:")
             print(contain, not_contain)
             print("The matches are: {}".format(net_name))
-        return net_name[0]
+        return path_to_active_nets + net_name[0]
 
     net_paths_ongoing = [(None, None)] * 6
     if len(ongoing_nets) != 0:
