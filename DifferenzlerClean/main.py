@@ -175,7 +175,7 @@ def many_players_magic(discount: int) \
             players[i]._strategy_memory,
             1,  # the training factor
             name_bases[i // 4 // fit_window]
-        ) for i in range(0, len(players), 4 * fit_window)
+        ) for i in range(0, 4 * fit_window * len(name_bases), 4 * fit_window)
     ]
     return players, train_tuples
 
