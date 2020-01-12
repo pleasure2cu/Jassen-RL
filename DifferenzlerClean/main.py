@@ -129,6 +129,7 @@ def many_players_magic(discount: int) \
             print("Loading ongoing nets failed. The given filters are:")
             print(contain, not_contain)
             print("The matches are: {}".format(net_name))
+            exit()
         return path_to_active_nets + net_name[0]
 
     net_paths_ongoing = [(None, None)] * 6
@@ -193,7 +194,7 @@ def main():
         rounds_played = int(os.listdir('./ongoing_nets/active_nets')[0].split('_')[-1][:-3]) // fit_window
     print("The training begins with {} players and rounds_played = {}, at {}"
           .format(len(players), rounds_played, training_start_time))
-    while (datetime.datetime.now() - training_start_time).total_seconds() < 9.5 * 3600:
+    while (datetime.datetime.now() - training_start_time).total_seconds() < 11 * 3600:
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
         for pred_model, pred_mem, strat_model, strat_mem, training_factor, _ in training_tuples:
             xs_pred, ys_pred = pred_mem.draw_batch(sample_limit_pred * training_factor)
@@ -227,7 +228,7 @@ def main():
     for pred_model, _, strat_model, _, _, name_base in training_tuples:
         pred_model.save("./pred_{}_{}.h5".format(name_base, rounds_played * fit_window))
         strat_model.save("./strat_{}_{}.h5".format(name_base, rounds_played * fit_window))
-    print("training is over")
+    print("training is over with {} rounds played at {}".format(rounds_played, datetime.datetime.now()))
 
 
 def freeze_players(
