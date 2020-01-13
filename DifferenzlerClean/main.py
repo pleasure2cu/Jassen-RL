@@ -97,7 +97,7 @@ def add_frozen_players(players: List[DifferenzlerPlayer]):
             strat_model = keras.models.load_model(strat_name)
             players += [
                 HandCraftEverywhereRnnPlayer(pred_model, strat_model, pred_mem, strat_mem, normal_pred_y_func,
-                                             normal_strat_y_func, 0.001, 0.001, 1, 1)
+                                             normal_strat_y_func, 0.001, 0.001, 1, 1, frozen=True)
                 for _ in range(4)
             ]
         print("The networks from the first checkpoint have been added")
@@ -247,7 +247,7 @@ def freeze_players(
         new_strat_model = keras.models.load_model(strat_name)
         players += [
             HandCraftEverywhereRnnPlayer(new_pred_model, new_strat_model, new_pred_mem, new_strat_mem,
-                                         normal_pred_y_func, normal_strat_y_func, 0.001, 0.001, 1, 1)
+                                         normal_pred_y_func, normal_strat_y_func, 0.001, 0.001, 1, 1, frozen=True)
             for _ in range(4 * nbr_of_tables)
         ]
 

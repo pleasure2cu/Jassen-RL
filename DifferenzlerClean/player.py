@@ -74,6 +74,7 @@ class RnnPlayer(DifferenzlerPlayer):
     _strategy_pool: List[Tuple[np.ndarray, np.ndarray]]
     _prediction_y_function: Callable[[int, int], Union[int, float]]  # (angesagt, gemacht) -> |R
     _strategy_y_function: Callable[[int, int], Union[int, float]]  # (angesagt, gemacht) -> |R
+    _frozen: bool
 
     _hand_vector: np.ndarray
     _table_position: int
@@ -90,7 +91,8 @@ class RnnPlayer(DifferenzlerPlayer):
             prediction_y_function: Callable[[int, int], Union[int, float]],
             strategy_y_function: Callable[[int, int], Union[int, float]],
             prediction_exp: float, strategy_exp: float,
-            batch_size_pred:int, batch_size_strat: int
+            batch_size_pred:int, batch_size_strat: int,
+            frozen: bool = False
     ):
         self._prediction_model = prediction_model
         self.strategy_model = strategy_model
@@ -102,6 +104,7 @@ class RnnPlayer(DifferenzlerPlayer):
         self._strategy_y_function = strategy_y_function
         self._batch_size_pred = batch_size_pred
         self._batch_size_strat = batch_size_strat
+        self._frozen = frozen
 
     def start_round(self, hand_vector: np.ndarray, table_position: int):
         self._prediction_pool = []
@@ -173,6 +176,8 @@ class RnnPlayer(DifferenzlerPlayer):
             self, prediction: int, made_points: int, train: bool, discount: Union[int, float]=0.0
     ):
         assert np.all(self._hand_vector == 0)
+        if self._frozen:
+            return
         # boost the samples
         boosted_pred_pool = list(chain.from_iterable(
             map(lambda sample: self.boost_color_pred_sample(sample.reshape(-1)), self._prediction_pool)
@@ -299,7 +304,7 @@ class StreunRnnPlayer(DifferenzlerPlayer):
         if len(q_values) == 0:
             action = self._current_possible_actions[0]
         else:
-            index = np.argmin(q_values)
+            index = np.argmax(q_values)
             action = self._current_possible_actions[index]
         self._hand_vector[action[0] + 9 * action[1]] = 0
         return action
