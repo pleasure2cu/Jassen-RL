@@ -93,8 +93,10 @@ def add_frozen_players(players: List[DifferenzlerPlayer]):
             )
         ]
         for pred_name, strat_name in net_names:
-            pred_model = keras.models.load_model(pred_name)
-            strat_model = keras.models.load_model(strat_name)
+            pred_model = prediction_resnet()
+            pred_model.load_weights(pred_name)
+            strat_model = hand_crafted_features_double_hinton()
+            strat_model.load_weights(strat_name)
             players += [
                 HandCraftEverywhereRnnPlayer(pred_model, strat_model, pred_mem, strat_mem, normal_pred_y_func,
                                              normal_strat_y_func, 0.001, 0.001, 1, 1, frozen=True)
@@ -114,10 +116,14 @@ def many_players_magic(discount: int) \
         if pred_net_path is not None:
             print("loading {}".format(pred_net_path))
             print("loading {}".format(strat_net_path))
+        pred_net = prediction_resnet()
+        if pred_net_path is not None:
+            pred_net.load_weights(pred_net_path)
+        strat_net = hand_crafted_features_double_hinton()
+        if strat_net_path is not None:
+            strat_net.load_weights(strat_net_path)
         return (
-            prediction_resnet() if pred_net_path is None else keras.models.load_model(pred_net_path),
-            hand_crafted_features_double_hinton() if strat_net_path is None else keras.models.load_model(strat_net_path),
-            ReplayMemory(2_000 * memory_scaling),
+            pred_net, strat_net, ReplayMemory(2_000 * memory_scaling),
             RnnReplayMemory(16_000 * memory_scaling), pred_y_func, strat_y_func, 0.06, 0.06,
             batch_size_pred, batch_size_strat
         )
@@ -208,7 +214,7 @@ def main():
 
         rounds_played += 1
 
-        if (rounds_played < 26_000 and rounds_played % 5_000 == 0) or rounds_played % 25_000 == 0:
+        if (rounds_played < 15_000 and rounds_played % 1_000 == 0) or rounds_played % 25_000 == 0:
             print("We passed {} rounds and it's {}".format(rounds_played, datetime.datetime.now()))
             print("time spent in keras = {}".format(RnnPlayer.total_time_spent_in_keras))
             print("time spent training = {}".format(RnnPlayer.time_spent_training))
