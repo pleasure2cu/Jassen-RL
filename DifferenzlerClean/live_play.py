@@ -4,9 +4,11 @@ from typing import Tuple
 import keras
 import numpy as np
 
+from agent_arena import get_net
 from helpers import get_winning_card_index, get_points_from_table
+from main_helper_methods import normal_pred_y_func, normal_strat_y_func
 from memory import ReplayMemory, RnnReplayMemory
-from player import RnnPlayer
+from player import RnnPlayer, HandCraftEverywhereRnnPlayer, StreunRnnPlayer
 from state import GameState
 
 rank_strings = ['a', 'k', 'd', 'j', 'z', '9', '8', '7', '6']
@@ -37,10 +39,18 @@ def translate_card_string_to_tnr(card_string: str) -> np.ndarray:
 
 
 def load_models() -> Tuple[keras.Model, keras.Model]:
-    return (
-        keras.models.load_model(sys.argv[1]),
-        keras.models.load_model(sys.argv[2])
-    )
+    if sys.argv[1].endswith("normal_prediction_2000000.h5"):
+        pred_model = keras.models.load_model("normal_prediction_2000000.h5")
+    else:
+        pred_model = get_net(sys.argv[1])
+        pred_model.load_weights(sys.argv[1])
+
+    if sys.argv[2].endswith("normal_strategy_2000000.h5"):
+        strat_model = keras.models.load_model("normal_strategy_2000000.h5")
+    else:
+        strat_model = get_net(sys.argv[2])
+        strat_model.load_weights(sys.argv[2])
+    return pred_model, strat_model
 
 
 def get_hand_vector() -> np.ndarray:
@@ -81,42 +91,50 @@ def get_played_card(player_index: int) -> np.ndarray:
     return translate_card_string_to_tnr(card_string)
 
 
-pred_model, strat_model = load_models()
-player = RnnPlayer(pred_model, strat_model, ReplayMemory(1), RnnReplayMemory(1), sum, sum, 0.0, 0.0, 1, 1)
-state = GameState()
+def main():
+    pred_model, strat_model = load_models()
+    if sys.argv[1].endswith('normal_prediction_2000000.h5'):
+        player = StreunRnnPlayer(pred_model, strat_model)
+    else:
+        player = HandCraftEverywhereRnnPlayer(pred_model, strat_model, ReplayMemory(1), RnnReplayMemory(1),
+                                              normal_pred_y_func, normal_strat_y_func, 0.0, 0.0, 1, 1)
+    state = GameState()
 
-get_trump()
-hand_card_vector = get_hand_vector()
-player_index = int(input("Player position: "))
-player.start_round(hand_card_vector, player_index)
-player_prediction = player.make_prediction()
-print("Player predicts:", player_prediction)
-predictions = np.zeros(4)
-predictions[player_index] = player_prediction
-state.predictions = predictions
+    player_index = int(input("Player position: "))
+    get_trump()
+    hand_card_vector = get_hand_vector()
+    player.start_round(hand_card_vector, player_index)
+    player_prediction = player.make_prediction()
+    print("Player predicts:", player_prediction)
+    predictions = np.zeros(4)
+    predictions[player_index] = player_prediction
+    state.predictions = predictions
+
+    current_player = 0
+    for blie_index in range(9):
+        print("\nBlie", blie_index + 1)
+        current_suit = -1
+        state.current_blie_index = blie_index
+        state.set_starting_player_of_blie(current_player)
+        for _ in range(4):
+            if current_player == player_index:
+                played_card = player.play_card(state, current_suit)
+                print("Computer plays:", tnr_to_string(played_card))
+            else:
+                played_card = get_played_card(current_player)
+            state.add_card(played_card, current_player)
+            if current_suit < 0:
+                current_suit = played_card[1]
+            current_player += 1
+            current_player %= 4
+        table = np.reshape(state.blies_history[state.current_blie_index][:8], (4, 2))
+        winning_index = get_winning_card_index(table, current_player)
+        points_on_table = get_points_from_table(table, blie_index == 8)
+        state.points_made[winning_index] += points_on_table
+        current_player = winning_index
+
+    print(state.points_made)
 
 
-current_player = 0
-for blie_index in range(9):
-    print("\nBlie", blie_index + 1)
-    current_suit = -1
-    state.current_blie_index = blie_index
-    state.set_starting_player_of_blie(current_player)
-    for _ in range(4):
-        if current_player == player_index:
-            played_card = player.play_card(state, current_suit)
-            print("Computer plays:", tnr_to_string(played_card))
-        else:
-            played_card = get_played_card(current_player)
-        state.add_card(played_card, current_player)
-        if current_suit < 0:
-            current_suit = played_card[1]
-        current_player += 1
-        current_player %= 4
-    table = np.reshape(state.blies_history[state.current_blie_index][:8], (4, 2))
-    winning_index = get_winning_card_index(table, current_player)
-    points_on_table = get_points_from_table(table, blie_index == 8)
-    state.points_made[winning_index] += points_on_table
-    current_player = winning_index
-
-print(state.points_made)
+if __name__ == '__main__':
+    main()
