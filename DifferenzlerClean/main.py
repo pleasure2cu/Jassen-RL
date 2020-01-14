@@ -200,7 +200,8 @@ def main():
         rounds_played = int(os.listdir('./ongoing_nets/active_nets')[0].split('_')[-1][:-3]) // fit_window
     print("The training begins with {} players and rounds_played = {}, at {}"
           .format(len(players), rounds_played, training_start_time))
-    while (datetime.datetime.now() - training_start_time).total_seconds() < 2 * 3600:
+    while (datetime.datetime.now() - training_start_time).total_seconds() < 10.75 * 3600:
+        print('rounds played: {}'.format(rounds_played), end='\r')
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
         for pred_model, pred_mem, strat_model, strat_mem, training_factor, _ in training_tuples:
             xs_pred, ys_pred = pred_mem.draw_batch(sample_limit_pred * training_factor)
@@ -220,6 +221,8 @@ def main():
             print("time spent training = {}".format(RnnPlayer.time_spent_training))
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
             RnnPlayer.time_spent_training = datetime.timedelta()
+            if rounds_played % 3_000 == 0:
+                save_current_nets(rounds_played, training_tuples)
 
         if rounds_played == 8_000 // fit_window:  # freeze copies of the non-normal players
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, 1, 2)
@@ -231,10 +234,15 @@ def main():
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, fit_window // 2)
             print("The 3rd freeze round has been performed. We have {} players now.".format(len(players)))
 
+    save_current_nets(rounds_played, training_tuples)
+    print("training is over with {} rounds played at {}".format(rounds_played, datetime.datetime.now()))
+
+
+def save_current_nets(rounds_played, training_tuples):
+    print("saving the current networks at rounds_played = {}".format(rounds_played))
     for pred_model, _, strat_model, _, _, name_base in training_tuples:
         pred_model.save("./pred_{}_{}.h5".format(name_base, rounds_played * fit_window))
         strat_model.save("./strat_{}_{}.h5".format(name_base, rounds_played * fit_window))
-    print("training is over with {} rounds played at {}".format(rounds_played, datetime.datetime.now()))
 
 
 def freeze_players(

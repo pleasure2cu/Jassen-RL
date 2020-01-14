@@ -11,12 +11,10 @@ class ReplayMemory(Memory):
 
     _size: int
     _items: List[Tuple[np.ndarray, Union[float, int]]]
-    _is_full: bool
 
     def __init__(self, size: int):
         self._size = size
         self._items = []
-        self._is_full = False
 
     def draw_batch(self, size: int) -> Tuple[np.ndarray, np.ndarray]:
         n = min(size, len(self._items))
@@ -27,9 +25,6 @@ class ReplayMemory(Memory):
     def add_samples(self, xs: List, y: Union[float, int]):
         self._items += [(np.reshape(x, -1), y) for x in xs]
         s = min(self._size, len(self._items))
-        if s == self._size and not self._is_full:
-            self._is_full = True
-            print("Replay Memory is full")
         self._items = self._items[-s:]
 
     def assert_items(self) -> bool:
@@ -50,12 +45,10 @@ class RnnReplayMemory(Memory):
     _nbr_of_sublists = 8
     _class_size: int
     _items: List[List[Tuple[np.ndarray, np.ndarray, Union[float, int]]]]
-    _is_full: bool
 
     def __init__(self, size: int):
         self._class_size = int(size / RnnReplayMemory._nbr_of_sublists + 0.5)
         self._items = [[] for _ in range(RnnReplayMemory._nbr_of_sublists)]
-        self._is_full = False
 
     def draw_batch(self, size: int) -> Tuple[List[np.ndarray], np.ndarray]:
         series_length_index = np.random.randint(RnnReplayMemory._nbr_of_sublists)
@@ -70,11 +63,6 @@ class RnnReplayMemory(Memory):
         self._items = [
             ts_list if len(ts_list) <= self._class_size else ts_list[-self._class_size:] for ts_list in self._items
         ]
-        if len(self._items[0]) == self._class_size and not self._is_full:
-            self._is_full = True
-            print("Rnn Replay Memory is full")
-        elif not self._is_full:
-            print("Rnn Replay Memory: {}%".format(int(len(self._items[0]) / self._class_size * 1000)/10), end='\r')
 
     def assert_items(self) -> bool:
         for bucket in self._items:
