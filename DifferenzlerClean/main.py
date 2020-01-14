@@ -200,7 +200,7 @@ def main():
         rounds_played = int(os.listdir('./ongoing_nets/active_nets')[0].split('_')[-1][:-3]) // fit_window
     print("The training begins with {} players and rounds_played = {}, at {}"
           .format(len(players), rounds_played, training_start_time))
-    while (datetime.datetime.now() - training_start_time).total_seconds() < 11 * 3600:
+    while (datetime.datetime.now() - training_start_time).total_seconds() < 2 * 3600:
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
         for pred_model, pred_mem, strat_model, strat_mem, training_factor, _ in training_tuples:
             xs_pred, ys_pred = pred_mem.draw_batch(sample_limit_pred * training_factor)
