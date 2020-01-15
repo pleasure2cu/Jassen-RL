@@ -251,7 +251,7 @@ def main():
         rounds_played = int(os.listdir(path_to_active_nets)[0].split('_')[-1][:-3]) // fit_window
     print("The training begins with {} players and rounds_played = {}, at {}"
           .format(len(players), rounds_played, training_start_time))
-    while (datetime.datetime.now() - training_start_time).total_seconds() < 3 * 3600:
+    while (datetime.datetime.now() - training_start_time).total_seconds() < 11 * 3600:
         if rounds_played % 10 == 0:
             print(rounds_played, (datetime.datetime.now() - training_start_time).total_seconds())
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
