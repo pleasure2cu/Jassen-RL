@@ -37,6 +37,7 @@ class DifferenzlerSitting(Sitting):
         if len(self._players) % 4:
             print("The number of players in the sitting has to be a multiple of 4. But is", len(self._players))
             exit()
+        print("We are playing with {} players in the sitting".format(len(self._players)))
         nbr_of_tables = len(self._players) // 4
         states = [GameState() for _ in range(nbr_of_tables)]
         if shuffle:
