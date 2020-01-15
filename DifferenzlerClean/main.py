@@ -201,7 +201,8 @@ def main():
     print("The training begins with {} players and rounds_played = {}, at {}"
           .format(len(players), rounds_played, training_start_time))
     while (datetime.datetime.now() - training_start_time).total_seconds() < 7.5 * 3600:
-        print(rounds_played, (datetime.datetime.now() - training_start_time).total_seconds())
+        if rounds_played % 10 == 0:
+            print(rounds_played, (datetime.datetime.now() - training_start_time).total_seconds())
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
         for pred_model, pred_mem, strat_model, strat_mem, training_factor, _ in training_tuples:
             xs_pred, ys_pred = pred_mem.draw_batch(sample_limit_pred * training_factor)
@@ -221,8 +222,6 @@ def main():
             print("time spent training = {}".format(RnnPlayer.time_spent_training))
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
             RnnPlayer.time_spent_training = datetime.timedelta()
-            if rounds_played % 3_000 == 0:
-                save_current_nets(rounds_played, training_tuples)
 
         if rounds_played == 8_000 // fit_window:  # freeze copies of the non-normal players
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, 1, 2)
