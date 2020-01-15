@@ -1,5 +1,4 @@
 import random
-from functools import reduce
 from typing import List, Union, Tuple
 
 import numpy as np
@@ -27,6 +26,25 @@ class ReplayMemory(Memory):
         s = min(self._size, len(self._items))
         self._items = self._items[-s:]
 
+    def save_memory(self, name_base: str, folder_path: str = './'):
+        if not folder_path.endswith('/'):
+            folder_path += '/'
+        x_matrix = np.array([t[0] for t in self._items])
+        y_vector = np.array([t[1] for t in self._items])
+        np.save(folder_path + 'x_' + name_base, x_matrix)
+        np.save(folder_path + 'y_' + name_base, y_vector)
+
+    def load_memory(self, name_base: str, folder_path: str = './'):
+        print("loading {} ReplayMemory".format(name_base))
+        if not folder_path.endswith('/'):
+            folder_path += '/'
+        x_matrix = np.load(folder_path + 'x_' + name_base + '.npy')
+        y_vector = np.load(folder_path + 'y_' + name_base + '.npy')
+        assert len(x_matrix) == len(y_vector), (len(x_matrix), len(y_vector))
+        self._items = [(x_matrix[i], y_vector[i]) for i in range(len(x_matrix))]
+        s = min(self._size, len(self._items))
+        self._items = self._items[-s:]
+
     def assert_items(self) -> bool:
         block = self._items[-360:]
         for turn_i in range(12):
@@ -41,7 +59,6 @@ class ReplayMemory(Memory):
 
 
 class RnnReplayMemory(Memory):
-
     _nbr_of_sublists = 8
     _class_size: int
     _items: List[List[Tuple[np.ndarray, np.ndarray, Union[float, int]]]]
@@ -60,6 +77,33 @@ class RnnReplayMemory(Memory):
     def add_samples(self, xs: List[Tuple[np.ndarray, np.ndarray]], y: Union[float, int]):
         for x in xs:
             self._items[len(x[0]) - 1].append((*x, y))  # index is decided by the nbr of time steps in the RNN input
+        self._items = [
+            ts_list if len(ts_list) <= self._class_size else ts_list[-self._class_size:] for ts_list in self._items
+        ]
+
+    def save_memory(self, name_base: str, folder_path: str = './'):
+        if not folder_path.endswith('/'):
+            folder_path += '/'
+        rnn_tensors = [np.array([t[0] for t in bucket]) for bucket in self._items]
+        aux_tensor = np.array([np.array([t[1] for t in bucket]) for bucket in self._items])
+        y_tensor = np.array([np.array([t[2] for t in bucket]) for bucket in self._items])
+        for i, rnn_tensor in enumerate(rnn_tensors):
+            np.save(folder_path + "rnn_{}_".format(i) + name_base, rnn_tensor)
+        np.save(folder_path + "aux_" + name_base, aux_tensor)
+        np.save(folder_path + "y_" + name_base, y_tensor)
+
+    def load_memory(self, name_base: str, folder_path: str = './'):
+        print("loading {} RnnReplayMemory".format(name_base))
+        if not folder_path.endswith('/'):
+            folder_path += '/'
+        rnn_tensors: np.ndarray = [np.load(folder_path + 'rnn_{}_'.format(i) + name_base + '.npy') for i in range(self._nbr_of_sublists)]
+        aux_tensor: np.ndarray = np.load(folder_path + 'aux_' + name_base + '.npy')
+        y_tensor: np.ndarray = np.load(folder_path + 'y_' + name_base + '.npy')
+        for bucket_i in range(self._nbr_of_sublists):
+            rnn_part, aux_part, y_part = rnn_tensors[bucket_i], aux_tensor[bucket_i], y_tensor[bucket_i]
+            assert len(rnn_part) == len(aux_part) and len(aux_part) == len(y_part)
+            for i in range(len(y_part)):
+                self._items[bucket_i].append((rnn_part[i], aux_part[i], y_part[i]))
         self._items = [
             ts_list if len(ts_list) <= self._class_size else ts_list[-self._class_size:] for ts_list in self._items
         ]

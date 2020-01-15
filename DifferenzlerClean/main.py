@@ -1,6 +1,7 @@
 import datetime
 import os
 from os import path
+from pathlib import Path
 from typing import List, Tuple
 
 import keras
@@ -26,6 +27,30 @@ batch_size_strat = 192
 sample_limit_strat = int(6 * 32 * fit_window * sample_coverage / batch_size_strat + 1) * batch_size_strat
 batch_size_pred = int(batch_size_strat / 8 + 1)
 sample_limit_pred = int(6 * 4 * fit_window * sample_coverage / batch_size_pred + 1) * batch_size_pred
+memory_scaling = 6 * 2
+path_to_memories = 'ongoing_nets/active_memories/'
+path_to_active_nets = 'ongoing_nets/active_nets/'
+path_to_frozen_nets = 'ongoing_nets/forzen_nets/'
+try:
+    from google.colab import drive
+    path_to_memories = '/content/drive/My Drive/' + path_to_memories
+    path_to_active_nets = '/content/drive/My Drive/' + path_to_active_nets
+    path_to_frozen_nets = '/content/drive/My Drive/' + path_to_frozen_nets
+except ImportError:
+    path_to_memories = './' + path_to_memories
+    Path(path_to_memories).mkdir(parents=True, exist_ok=True)
+    path_to_active_nets = './' + path_to_active_nets
+    Path(path_to_active_nets).mkdir(parents=True, exist_ok=True)
+    path_to_frozen_nets = './' + path_to_frozen_nets
+    Path(path_to_frozen_nets).mkdir(parents=True, exist_ok=True)
+mem_name_tuples = [
+    ('normal_1_pred_mem', 'normal_1_strat_mem'),
+    ('normal_2_pred_mem', 'normal_2_strat_mem'),
+    ('aggressive_pred_mem', 'aggressive_strat_mem'),
+    ('defensive_pred_mem', 'defensive_strat_mem'),
+    ('hyper_aggressive_pred_mem', 'hyper_aggressive_strat_mem'),
+    ('hyper_defensive_pred_mem', 'hyper_defensive_strat_mem'),
+]
 print("Batch size for strat = {}".format(batch_size_strat))
 print("Sample limit strategy = {}".format(sample_limit_strat))
 
@@ -66,7 +91,6 @@ def some_magic(discount: int) \
 
 
 def add_frozen_players(players: List[DifferenzlerPlayer]):
-    path_to_frozen_nets = './ongoing_nets/forzen_nets/'
     frozen_nets = os.listdir(path_to_frozen_nets) if path.exists(path_to_frozen_nets) else []
     if len(frozen_nets) == 0:
         print("there are no frozen nets")
@@ -105,57 +129,69 @@ def add_frozen_players(players: List[DifferenzlerPlayer]):
         print("The networks from the first checkpoint have been added")
 
 
+def get_tuple(pred_y_func, strat_y_func, pred_net_path=None, strat_net_path=None, pred_mem: Memory=None,
+              strat_mem: Memory=None):
+    if pred_net_path is not None:
+        print("loading {}".format(pred_net_path))
+        print("loading {}".format(strat_net_path))
+    pred_net = prediction_resnet()
+    if pred_net_path is not None:
+        pred_net.load_weights(pred_net_path)
+    strat_net = hand_crafted_features_double_hinton()
+    if strat_net_path is not None:
+        strat_net.load_weights(strat_net_path)
+    return (
+        pred_net, strat_net,
+        ReplayMemory(2_000 * memory_scaling) if pred_mem is None else pred_mem,
+        RnnReplayMemory(16_000 * memory_scaling) if strat_mem is None else strat_mem,
+        pred_y_func, strat_y_func, 0.06, 0.06, batch_size_pred, batch_size_strat
+    )
+
+
+def get_network_name(contain: List[str], not_contain: List[str] = []) -> str:
+    ongoing_nets = os.listdir(path_to_active_nets)
+    tmp = filter(lambda name: all(map(lambda c: c in name, contain)), ongoing_nets)
+    net_name = list(filter(lambda name: not any(map(lambda c: c in name, not_contain)), tmp))
+    if len(net_name) != 1:
+        print("Loading ongoing nets failed. The given filters are:")
+        print(contain, not_contain)
+        print("The matches are: {}".format(net_name))
+        exit()
+    return path_to_active_nets + net_name[0]
+
+
 def many_players_magic(discount: int) \
         -> Tuple[List[DifferenzlerPlayer], List[Tuple[keras.Model, Memory, keras.Model, Memory, int, str]]]:
-    # we want 2 normal player nets, 1 each for aggressive, defensive, hyper aggressive, hyper defensive
-    memory_scaling = 6 * 2
-    path_to_active_nets = './ongoing_nets/active_nets/'
-    ongoing_nets = os.listdir(path_to_active_nets) if path.exists(path_to_active_nets) else []
 
-    def get_tuple(pred_y_func, strat_y_func, pred_net_path=None, strat_net_path=None):
-        if pred_net_path is not None:
-            print("loading {}".format(pred_net_path))
-            print("loading {}".format(strat_net_path))
-        pred_net = prediction_resnet()
-        if pred_net_path is not None:
-            pred_net.load_weights(pred_net_path)
-        strat_net = hand_crafted_features_double_hinton()
-        if strat_net_path is not None:
-            strat_net.load_weights(strat_net_path)
-        return (
-            pred_net, strat_net, ReplayMemory(2_000 * memory_scaling),
-            RnnReplayMemory(16_000 * memory_scaling), pred_y_func, strat_y_func, 0.06, 0.06,
-            batch_size_pred, batch_size_strat
-        )
-
-    def get_net_name(contain: List[str], not_contain: List[str]=[]) -> str:
-        tmp = filter(lambda name: all(map(lambda c: c in name, contain)), ongoing_nets)
-        net_name = list(filter(lambda name: not any(map(lambda c: c in name, not_contain)), tmp))
-        if len(net_name) != 1:
-            print("Loading ongoing nets failed. The given filters are:")
-            print(contain, not_contain)
-            print("The matches are: {}".format(net_name))
-            exit()
-        return path_to_active_nets + net_name[0]
-
-    net_paths_ongoing = [(None, None)] * 6
-    if len(ongoing_nets) != 0:
-        net_paths_ongoing = [
-            (get_net_name(['pred', "normal_1"]), get_net_name(['strat', 'normal_1'])),
-            (get_net_name(['pred', "normal_2"]), get_net_name(['strat', 'normal_2'])),
-            (get_net_name(['pred', "aggressive"], ['hyper']), get_net_name(['strat', 'aggressive'], ['hyper'])),
-            (get_net_name(['pred', "defensive"], ['hyper']), get_net_name(['strat', 'defensive'], ['hyper'])),
-            (get_net_name(['pred', "hyper_aggressive"]), get_net_name(['strat', 'hyper_aggressive'])),
-            (get_net_name(['pred', "hyper_defensive"]), get_net_name(['strat', 'hyper_defensive'])),
+    ongoing_nets_name_tuples = [(None, None)] * 6
+    if path.exists(path_to_active_nets) and len(os.listdir(path_to_active_nets)) != 0:
+        ongoing_nets_name_tuples = [
+            (get_network_name(['pred', "normal_1"]), get_network_name(['strat', 'normal_1'])),
+            (get_network_name(['pred', "normal_2"]), get_network_name(['strat', 'normal_2'])),
+            (get_network_name(['pred', "aggressive"], ['hyper']), get_network_name(['strat', 'aggressive'], ['hyper'])),
+            (get_network_name(['pred', "defensive"], ['hyper']), get_network_name(['strat', 'defensive'], ['hyper'])),
+            (get_network_name(['pred', "hyper_aggressive"]), get_network_name(['strat', 'hyper_aggressive'])),
+            (get_network_name(['pred', "hyper_defensive"]), get_network_name(['strat', 'hyper_defensive'])),
         ]
 
+    current_memories = [(None, None)] * 6
+    if path.exists(path_to_memories) and len(os.listdir(path_to_memories)) != 0:
+        current_memories = [
+            (ReplayMemory(2_000 * memory_scaling), RnnReplayMemory(16_000 * memory_scaling)) for _ in range(6)
+        ]
+        for i in range(len(current_memories)):
+            pred_mem, strat_mem = current_memories[i]
+            pred_name_base, strat_name_base = mem_name_tuples[i]
+            pred_mem.load_memory(pred_name_base, path_to_memories)
+            strat_mem.load_memory(strat_name_base, path_to_memories)
+
     player_args = [
-        get_tuple(normal_pred_y_func, normal_strat_y_func, *net_paths_ongoing[0]),
-        get_tuple(normal_pred_y_func, normal_strat_y_func, *net_paths_ongoing[1]),
-        get_tuple(normal_pred_y_func, aggressive_strat_y_func, *net_paths_ongoing[2]),
-        get_tuple(normal_pred_y_func, defensive_strat_y_func, *net_paths_ongoing[3]),
-        get_tuple(normal_pred_y_func, very_aggressive_strat_y_func, *net_paths_ongoing[4]),
-        get_tuple(normal_pred_y_func, very_defensive_strat_y_func, *net_paths_ongoing[5]),
+        get_tuple(normal_pred_y_func, normal_strat_y_func, *ongoing_nets_name_tuples[0], *current_memories[0]),
+        get_tuple(normal_pred_y_func, normal_strat_y_func, *ongoing_nets_name_tuples[1], *current_memories[1]),
+        get_tuple(normal_pred_y_func, aggressive_strat_y_func, *ongoing_nets_name_tuples[2], *current_memories[2]),
+        get_tuple(normal_pred_y_func, defensive_strat_y_func, *ongoing_nets_name_tuples[3], *current_memories[3]),
+        get_tuple(normal_pred_y_func, very_aggressive_strat_y_func, *ongoing_nets_name_tuples[4], *current_memories[4]),
+        get_tuple(normal_pred_y_func, very_defensive_strat_y_func, *ongoing_nets_name_tuples[5], *current_memories[5]),
     ]
 
     players = sum([
@@ -187,6 +223,21 @@ def many_players_magic(discount: int) \
     return players, train_tuples
 
 
+def save_checkpoint(training_tuples: List[Tuple[keras.Model, Memory, keras.Model, Memory, int, str]], rounds_played: int):
+    old_files = os.listdir(path_to_active_nets)
+    for i in range(len(training_tuples)):
+        pred_net, pred_mem, strat_net, strat_mem, _, net_name_base = training_tuples[i]
+        pred_mem_name_base, strat_mem_name_base = mem_name_tuples[i]
+        pred_net.save('{folder}/pred_{base}_{rounds}.h5'
+                      .format(folder=path_to_active_nets, base=net_name_base, rounds=rounds_played*fit_window))
+        strat_net.save('{folder}/strat_{base}_{rounds}.h5'
+                       .format(folder=path_to_active_nets, base=net_name_base, rounds=rounds_played*fit_window))
+        pred_mem.save_memory(pred_mem_name_base, path_to_memories)
+        strat_mem.save_memory(strat_mem_name_base, path_to_memories)
+    for old_file in old_files:
+        os.remove(os.path.join(path_to_active_nets, old_file))
+
+
 def main():
     discount = 4
     players, training_tuples = many_players_magic(discount)
@@ -196,11 +247,11 @@ def main():
     sitting.set_players(players)
     training_start_time = datetime.datetime.now()
     rounds_played = 0
-    if path.exists('./ongoing_nets/active_nets') and len('./ongoing_nets/active_nets') != 0:
-        rounds_played = int(os.listdir('./ongoing_nets/active_nets')[0].split('_')[-1][:-3]) // fit_window
+    if path.exists(path_to_active_nets) and len(os.listdir(path_to_active_nets)) != 0:
+        rounds_played = int(os.listdir(path_to_active_nets)[0].split('_')[-1][:-3]) // fit_window
     print("The training begins with {} players and rounds_played = {}, at {}"
           .format(len(players), rounds_played, training_start_time))
-    while (datetime.datetime.now() - training_start_time).total_seconds() < 6.5 * 3600:
+    while (datetime.datetime.now() - training_start_time).total_seconds() < 3 * 3600:
         if rounds_played % 10 == 0:
             print(rounds_played, (datetime.datetime.now() - training_start_time).total_seconds())
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
@@ -223,6 +274,11 @@ def main():
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
             RnnPlayer.time_spent_training = datetime.timedelta()
 
+        if rounds_played != 0 and rounds_played % 2_000 == 0:
+            print("about to save a checkpoint")
+            save_checkpoint(training_tuples, rounds_played)
+            print("checkpoint has successfully been saved")
+
         if rounds_played == 8_000 // fit_window:  # freeze copies of the non-normal players
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, 1, 2)
             print("The 1st freeze round has been performed. We have {} players now.".format(len(players)))
@@ -236,15 +292,8 @@ def main():
             print("The 3rd freeze round has been performed. We have {} players now.".format(len(players)))
             sitting.set_players(players)
 
-    save_current_nets(rounds_played, training_tuples)
+    save_checkpoint(training_tuples, rounds_played)
     print("training is over with {} rounds played at {}".format(rounds_played, datetime.datetime.now()))
-
-
-def save_current_nets(rounds_played, training_tuples):
-    print("saving the current networks at rounds_played = {}".format(rounds_played))
-    for pred_model, _, strat_model, _, _, name_base in training_tuples:
-        pred_model.save("./pred_{}_{}.h5".format(name_base, rounds_played * fit_window))
-        strat_model.save("./strat_{}_{}.h5".format(name_base, rounds_played * fit_window))
 
 
 def freeze_players(
@@ -255,12 +304,16 @@ def freeze_players(
     new_strat_mem = RnnReplayMemory(1)
     for k in range(start_index, og_lenght):
         pred_m, _, strat_m, _, _, name_b = training_tuples[k]
-        pred_name = "./pred_{}_{}.h5".format(name_b, rounds_played * fit_window)
-        strat_name = "./strat_{}_{}.h5".format(name_b, rounds_played * fit_window)
+        pred_name = os.path.join(path_to_frozen_nets, "pred_{}_{}.h5".format(name_b, rounds_played * fit_window))
+        strat_name = os.path.join(path_to_frozen_nets, "strat_{}_{}.h5".format(name_b, rounds_played * fit_window))
+        print(pred_name)
+        print(strat_name)
         pred_m.save(pred_name)
         strat_m.save(strat_name)
+        print("saved")
         new_pred_model = keras.models.load_model(pred_name)
         new_strat_model = keras.models.load_model(strat_name)
+        print("loaded")
         players += [
             HandCraftEverywhereRnnPlayer(new_pred_model, new_strat_model, new_pred_mem, new_strat_mem,
                                          normal_pred_y_func, normal_strat_y_func, 0.001, 0.001, 1, 1, frozen=True)
