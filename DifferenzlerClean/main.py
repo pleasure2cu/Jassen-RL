@@ -226,12 +226,15 @@ def main():
         if rounds_played == 8_000 // fit_window:  # freeze copies of the non-normal players
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, 1, 2)
             print("The 1st freeze round has been performed. We have {} players now.".format(len(players)))
+            sitting.set_players(players)
         elif rounds_played == 80_000 // fit_window:
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, fit_window // 2)
             print("The 2nd freeze round has been performed. We have {} players now.".format(len(players)))
+            sitting.set_players(players)
         elif rounds_played == 500_000 // fit_window:
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, fit_window // 2)
             print("The 3rd freeze round has been performed. We have {} players now.".format(len(players)))
+            sitting.set_players(players)
 
     save_current_nets(rounds_played, training_tuples)
     print("training is over with {} rounds played at {}".format(rounds_played, datetime.datetime.now()))
