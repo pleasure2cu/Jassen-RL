@@ -274,7 +274,7 @@ def main():
             RnnPlayer.total_time_spent_in_keras = datetime.timedelta()
             RnnPlayer.time_spent_training = datetime.timedelta()
 
-        if rounds_played != 0 and rounds_played % 2_000 == 0:
+        if rounds_played != 0 and rounds_played % 500 == 0:
             print("about to save a checkpoint")
             save_checkpoint(training_tuples, rounds_played)
             print("checkpoint has successfully been saved")
