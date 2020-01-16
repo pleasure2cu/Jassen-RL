@@ -322,7 +322,7 @@ def main():
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, fit_window // 2)
             print("The 2nd freeze round has been performed. We have {} players now.".format(len(players)))
             sitting.set_players(players)
-        elif rounds_played == 500_000 // fit_window:
+        elif rounds_played == 450_000 // fit_window:
             freeze_players(players, og_training_tuples_length, rounds_played, training_tuples, fit_window // 2)
             print("The 3rd freeze round has been performed. We have {} players now.".format(len(players)))
             sitting.set_players(players)
