@@ -90,43 +90,78 @@ def some_magic(discount: int) \
            "quad_hinton_net_new_{}_discount_{}_dropout_player".format(discount, int(dropout * 100))
 
 
-def add_frozen_players(players: List[DifferenzlerPlayer]):
+def add_frozen_checkpoint(players: List[DifferenzlerPlayer], file_name_ending: str,
+                          name_tuples: List[Tuple[str, str]], nbr_of_tables_each: int) -> bool:
     frozen_nets = os.listdir(path_to_frozen_nets) if path.exists(path_to_frozen_nets) else []
-    if len(frozen_nets) == 0:
-        print("there are no frozen nets")
-        return
+    if len(frozen_nets) == 0 or not any(map(lambda name: name.endswith(file_name_ending), frozen_nets)):
+        return False
     pred_mem = ReplayMemory(1)
     strat_mem = RnnReplayMemory(1)
-    if any(map(lambda name: name.endswith('7995.h5'), frozen_nets)):  # we passed the first checkpoint
-        net_names = [
-            (
-                path_to_frozen_nets + "pred_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5",
-                path_to_frozen_nets + "strat_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5"
-            ),
-            (
-                path_to_frozen_nets + "pred_double_hinton_defensive_discount_4_dropout_50_player_7995.h5",
-                path_to_frozen_nets + "strat_double_hinton_defensive_discount_4_dropout_50_player_7995.h5"
-            ),
-            (
-                path_to_frozen_nets + "pred_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5",
-                path_to_frozen_nets + "strat_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5"
-            ),
-            (
-                path_to_frozen_nets + "pred_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5",
-                path_to_frozen_nets + "strat_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5"
-            )
+    for pred_name, strat_name in name_tuples:
+        pred_model = prediction_resnet()
+        pred_model.load_weights(pred_name)
+        strat_model = hand_crafted_features_double_hinton()
+        strat_model.load_weights(strat_name)
+        players += [
+            HandCraftEverywhereRnnPlayer(pred_model, strat_model, pred_mem, strat_mem, normal_pred_y_func,
+                                         normal_strat_y_func, 0.001, 0.001, 1, 1, frozen=True)
+            for _ in range(4*nbr_of_tables_each)
         ]
-        for pred_name, strat_name in net_names:
-            pred_model = prediction_resnet()
-            pred_model.load_weights(pred_name)
-            strat_model = hand_crafted_features_double_hinton()
-            strat_model.load_weights(strat_name)
-            players += [
-                HandCraftEverywhereRnnPlayer(pred_model, strat_model, pred_mem, strat_mem, normal_pred_y_func,
-                                             normal_strat_y_func, 0.001, 0.001, 1, 1, frozen=True)
-                for _ in range(4)
-            ]
-        print("The networks from the first checkpoint have been added")
+    return True
+
+
+def add_frozen_players(players: List[DifferenzlerPlayer]):
+    net_names_1st_freeze = [
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_aggressive_discount_4_dropout_50_player_7995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_defensive_discount_4_dropout_50_player_7995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_defensive_discount_4_dropout_50_player_7995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_hyper_aggressive_discount_4_dropout_50_player_7995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_hyper_defensive_discount_4_dropout_50_player_7995.h5")
+        )
+    ]
+
+    net_names_2nd_freeze = [
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_normal_1_discount_4_dropout_50_player_79995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_normal_1_discount_4_dropout_50_player_79995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_normal_2_discount_4_dropout_50_player_79995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_normal_2_discount_4_dropout_50_player_79995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_aggressive_discount_4_dropout_50_player_79995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_aggressive_discount_4_dropout_50_player_79995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_defensive_discount_4_dropout_50_player_79995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_defensive_discount_4_dropout_50_player_79995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_hyper_aggressive_discount_4_dropout_50_player_79995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_hyper_aggressive_discount_4_dropout_50_player_79995.h5")
+        ),
+        (
+            os.path.join(path_to_frozen_nets, "pred_double_hinton_hyper_defensive_discount_4_dropout_50_player_79995.h5"),
+            os.path.join(path_to_frozen_nets, "strat_double_hinton_hyper_defensive_discount_4_dropout_50_player_79995.h5")
+        )
+    ]
+
+    checkpoints_data = [(net_names_1st_freeze, '7995.h5', 1), (net_names_2nd_freeze, '79995.h5', fit_window // 2)]
+    for net_names, file_name_ending, nbr_of_tables in checkpoints_data:
+        if not add_frozen_checkpoint(players, file_name_ending, net_names, nbr_of_tables):
+            break
+        print("added a frozen checkpoint")
 
 
 def get_tuple(pred_y_func, strat_y_func, pred_net_path=None, strat_net_path=None, pred_mem: Memory=None,
