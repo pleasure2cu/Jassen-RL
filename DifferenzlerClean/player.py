@@ -169,6 +169,7 @@ class RnnPlayer(DifferenzlerPlayer):
             q_values = []
         else:
             q_values = self.strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
+            print(q_values)
         RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
         return self.get_action(q_values)
 
