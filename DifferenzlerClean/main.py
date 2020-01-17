@@ -295,8 +295,8 @@ def main():
             xs_strat, ys_strat = strat_mem.draw_batch(sample_limit_strat * training_factor)
 
             tmp = datetime.datetime.now()
-            pred_model.fit(xs_pred, ys_pred, batch_size=batch_size_pred, verbose=1)
-            strat_model.fit(xs_strat, ys_strat, batch_size=batch_size_strat, verbose=0)
+            pred_model.fit(xs_pred, ys_pred, batch_size=batch_size_pred, verbose=0)
+            strat_model.fit(xs_strat, ys_strat, batch_size=batch_size_strat, verbose=1)
             RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
             RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
 
