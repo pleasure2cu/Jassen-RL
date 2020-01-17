@@ -153,6 +153,7 @@ class RnnPlayer(DifferenzlerPlayer):
         if len(q_values) == 0:
             action = self._current_possible_actions[0]
         else:
+            print(q_values)
             if np.random.binomial(1, self._strategy_exp):
                 index = np.random.randint(len(q_values))
             else:
