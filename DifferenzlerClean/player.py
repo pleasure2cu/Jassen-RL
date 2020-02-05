@@ -153,8 +153,6 @@ class RnnPlayer(DifferenzlerPlayer):
         if len(q_values) == 0:
             action = self._current_possible_actions[0]
         else:
-            print("This player is frozen:", self._frozen)
-            print(q_values)
             if np.random.binomial(1, self._strategy_exp):
                 index = np.random.randint(len(q_values))
             else:
@@ -171,7 +169,6 @@ class RnnPlayer(DifferenzlerPlayer):
             q_values = []
         else:
             q_values = self.strategy_model.predict([rnn_state_tensor, aux_state_action_tensor])
-            print(q_values)
         RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
         return self.get_action(q_values)
 

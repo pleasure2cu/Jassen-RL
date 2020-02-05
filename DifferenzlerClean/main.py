@@ -269,8 +269,8 @@ def save_checkpoint(training_tuples: List[Tuple[keras.Model, Memory, keras.Model
                        .format(folder=path_to_active_nets, base=net_name_base, rounds=rounds_played*fit_window))
         pred_mem.save_memory(pred_mem_name_base, path_to_memories)
         strat_mem.save_memory(strat_mem_name_base, path_to_memories)
-    for old_file in old_files:
-        os.remove(os.path.join(path_to_active_nets, old_file))
+    # for old_file in old_files:
+    #     os.remove(os.path.join(path_to_active_nets, old_file))
 
 
 def main():
@@ -290,13 +290,21 @@ def main():
         if rounds_played % 10 == 0:
             print(rounds_played, (datetime.datetime.now() - training_start_time).total_seconds())
         sitting.play_full_round(train=False, discount=discount, shuffle=True)
-        for pred_model, pred_mem, strat_model, strat_mem, training_factor, _ in training_tuples:
+        for pred_model, pred_mem, strat_model, strat_mem, training_factor, name_base in training_tuples:
             xs_pred, ys_pred = pred_mem.draw_batch(sample_limit_pred * training_factor)
             xs_strat, ys_strat = strat_mem.draw_batch(sample_limit_strat * training_factor)
 
             tmp = datetime.datetime.now()
-            pred_model.fit(xs_pred, ys_pred, batch_size=batch_size_pred, verbose=0)
-            strat_model.fit(xs_strat, ys_strat, batch_size=batch_size_strat, verbose=1)
+            a = pred_model.fit(xs_pred, ys_pred, batch_size=batch_size_pred, verbose=0)
+            b = strat_model.fit(xs_strat, ys_strat, batch_size=batch_size_strat, verbose=0)
+            if np.nan in a.history['loss']:
+                print("The prediction model for {} just had a loss that is NaN".format(name_base))
+                print("The rounds_played variable is {}".format(rounds_played))
+                exit()
+            if np.nan in b.history['loss']:
+                print("The strategy model for {} just had a loss that is NaN".format(name_base))
+                print("The rounds_played variable is {}".format(rounds_played))
+                exit()
             RnnPlayer.total_time_spent_in_keras += datetime.datetime.now() - tmp
             RnnPlayer.time_spent_training += datetime.datetime.now() - tmp
 
