@@ -1,3 +1,4 @@
+import datetime
 import sys
 from typing import List, Tuple
 
@@ -17,7 +18,7 @@ total_rounds = 20_000
 rounds_per_partie = 20
 starting_clock = 4  # there are four positions from which a hand can start
 player_factor = rounds_per_partie // starting_clock  # we vectorise over the different positions of the starting player
-parallel_factor = 25
+parallel_factor = 50
 epochs = total_rounds // rounds_per_partie // 2 // parallel_factor
 
 # for readability
@@ -92,7 +93,45 @@ def get_models_configs(models):
 
 def main():
     sys_inputs = [sys.argv[1:]]
+    # sys_inputs = []
+    # for discount in discounts:
+    #     sys_inputs.append([
+    #         "pred_double_hinton_net_new_{}_discount_50_dropout_player_100000.h5".format(discount),
+    #         "strat_double_hinton_net_new_{}_discount_50_dropout_player_100000.h5".format(discount),
+    #         "-streun"
+    #     ])
+    # for i in range(3):
+    #     for j in range(i+1, 3):
+    #         sys_inputs.append([
+    #             "pred_double_hinton_net_new_{}_discount_50_dropout_player_100000.h5".format(discounts[i]),
+    #             "strat_double_hinton_net_new_{}_discount_50_dropout_player_100000.h5".format(discounts[i]),
+    #             "pred_double_hinton_net_new_{}_discount_50_dropout_player_100000.h5".format(discounts[j]),
+    #             "strat_double_hinton_net_new_{}_discount_50_dropout_player_100000.h5".format(discounts[j])
+    #         ])
+    # sys_inputs += [
+    #     [
+    #         "pred_hinton_net_test_discounts_8_discount_50_dropout_player_100000.h5",
+    #         "strat_hinton_net_test_discounts_8_discount_50_dropout_player_100000.h5",
+    #         "-streun"
+    #     ],
+        # [
+        #     "pred_hinton_net_test_discounts_32_discount_50_dropout_player_100000.h5",
+        #     "strat_hinton_net_test_discounts_32_discount_50_dropout_player_100000.h5",
+        #     "pred_double_hinton_net_new_8_discount_50_dropout_player_100000.h5",
+        #     "strat_double_hinton_net_new_8_discount_50_dropout_player_100000.h5",
+        # ],
+    # ]
+    # sys_inputs = [
+    #     [
+    #         "pred_double_hinton_net_new_8_discount_50_dropout_player_100000.h5",
+    #         "strat_double_hinton_net_new_8_discount_50_dropout_player_100000.h5",
+    #         "pred_hinton_net_test_discounts_8_discount_50_dropout_player_100000.h5",
+    #         "strat_hinton_net_test_discounts_8_discount_50_dropout_player_100000.h5",
+    #     ]
+    # ]
+
     for sys_input in sys_inputs:
+        print(datetime.datetime.now())
         use_streun = '-streun' in sys_input
         if use_streun:
             sys_input.remove('-streun')
@@ -116,7 +155,7 @@ def main():
                 for pred_model, strat_model in all_configs
             ]
         else:
-            players_constr = [RnnPlayer, RnnPlayer]
+            players_constr = [HandCraftEverywhereRnnPlayer, HandCraftEverywhereRnnPlayer]
             players = [
                 (players_constr[0] if pred_model == all_configs[0][0] else players_constr[1])(
                     pred_model, strat_model, pred_memory, strat_memory, normal_pred_y_func, normal_strat_y_func,
@@ -145,11 +184,12 @@ def main():
 
             print("{}% ({} / {})".format(int((i + 1) / epochs * 1000) / 10, i + 1, epochs), end='\r')
 
-        print("the total match ended with:\n{} - {}\tp({}, {}) = {}".format(
+        print("the total match ended with:\n{} - {}\tPA({}, {}) = {}".format(
             wins[0], wins[1], rounds_per_partie,
             str(total_rounds / 1000) + 'K', wins[0] / total_rounds * rounds_per_partie
         ))
         print('over {} total rounds'.format(total_rounds))
+        print('\n\n')
 
 
 if __name__ == '__main__':
